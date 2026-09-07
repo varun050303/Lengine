@@ -1,0 +1,81 @@
+{
+  "pass": 2,
+  "topic_id": "topic.ssrf",
+  "reviewer_role": "Senior AppSec engineer reviewing junior study material",
+  "review_date": "2026-09-07",
+  "input_file": "editorial/01-draft.md",
+  "issues": [
+    {
+      "id": "ISSUE-01",
+      "title": "IMDSv2 mechanism underspecified",
+      "issue_type": "causal",
+      "severity": "major",
+      "evidence_basis": "source",
+      "description": "Draft mentions IMDSv2 requires PUT for token but does not explain why this blocks standard SSRF (most primitives only perform GET without custom headers).",
+      "recommendation": "Detail the PUT token handshake and header requirements vs GET-only SSRF sinks."
+    },
+    {
+      "id": "ISSUE-02",
+      "title": "Missing defense-as-assumption analysis",
+      "issue_type": "teaching",
+      "severity": "blocking",
+      "evidence_basis": "expert_judgment",
+      "description": "Draft lacks systematic analysis of what assumptions each defense mechanism relies upon and how those assumptions fail.",
+      "recommendation": "Add structured defense analysis covering IP blocklists, hostname allowlists, DNS validation, and network segmentation."
+    },
+    {
+      "id": "ISSUE-03",
+      "title": "Blind SSRF treatment is shallow",
+      "issue_type": "scope",
+      "severity": "major",
+      "evidence_basis": "expert_judgment",
+      "description": "Investigation experiments assume full response observability; does not provide rigorous methods for blind SSRF.",
+      "recommendation": "Model OOB callbacks, timing/error differentials, and internal side-effects for blind SSRF."
+    },
+    {
+      "id": "ISSUE-04",
+      "title": "Missing explicit variants section",
+      "issue_type": "schema",
+      "severity": "major",
+      "evidence_basis": "expert_judgment",
+      "description": "SSRF has distinct architectural variants (full-response vs blind) that change investigation and impact.",
+      "recommendation": "Add structured variants distinguishing full-response and blind SSRF."
+    },
+    {
+      "id": "ISSUE-05",
+      "title": "Experiment 2 safety caution",
+      "issue_type": "safety",
+      "severity": "major",
+      "evidence_basis": "expert_judgment",
+      "description": "Immediately requesting sensitive cloud paths in examples encourages unnecessarily aggressive discovery.",
+      "recommendation": "Enforce metadata directory listing root (/latest/meta-data/) as safe discovery, reserving credential path for authorized impact demonstration."
+    },
+    {
+      "id": "ISSUE-06",
+      "title": "RFC 3986 claim lacks section specificity",
+      "issue_type": "source",
+      "severity": "minor",
+      "evidence_basis": "source",
+      "description": "RFC 3986 is cited generally without specifying section numbers for URI authority and userinfo parsing.",
+      "recommendation": "Cite RFC 3986 §3.2, §3.2.1, and §2.1 explicitly."
+    },
+    {
+      "id": "ISSUE-07",
+      "title": "Missing novel scenario and transfer test",
+      "issue_type": "teaching",
+      "severity": "blocking",
+      "evidence_basis": "learner_test",
+      "description": "Topic lacks an unfamiliar transfer scenario and understanding test to prove mechanistic reasoning over payload recall.",
+      "recommendation": "Include an assessment scenario with non-standard sink (e.g. headless browser rendering to gRPC internal service)."
+    },
+    {
+      "id": "ISSUE-08",
+      "title": "Transfer section lacks explicit prerequisite linkage",
+      "issue_type": "teaching",
+      "severity": "minor",
+      "evidence_basis": "expert_judgment",
+      "description": "Lists attack surfaces without deducing them from the core concepts (URL parsing, DNS resolution, network boundaries).",
+      "recommendation": "Add a transferable reasoning model connecting concept primitives to candidate attack surfaces."
+    }
+  ]
+}

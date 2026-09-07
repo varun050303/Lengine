@@ -1,13 +1,20 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Lengine Topic",
-  "description": "A vulnerability-specific reasoning model following the Lengine knowledge system.",
+  "title": "Lengine Topic (v2.0)",
+  "description": "A vulnerability-specific reasoning model adhering to the 4 Lengine contracts.",
   "type": "object",
   "required": [
-    "topic",
+    "schema_version",
+    "content_version",
+    "topic_id",
     "display_name",
+    "status",
+    "category",
     "prerequisites",
     "mechanism_family",
+    "learning_objectives",
+    "safety_contract",
+    "implementation_variance",
     "mental_model",
     "invariant",
     "normal_behavior",
@@ -17,31 +24,77 @@
     "investigation",
     "confirmation",
     "capability_and_impact",
+    "defense_analysis",
     "traps",
+    "variants",
     "transfer",
+    "claims_ref",
+    "assessment_ref",
     "sources"
   ],
   "properties": {
-    "topic": { "type": "string", "description": "URL-safe slug identifier" },
+    "schema_version": { "type": "string", "enum": ["2.0"] },
+    "content_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "topic_id": { "type": "string", "pattern": "^topic\\.[a-z0-9-]+$" },
     "display_name": { "type": "string" },
+    "status": { "type": "string", "enum": ["draft", "in_review", "approved", "deprecated"] },
     "category": { "type": "string", "enum": ["server-side", "client-side", "advanced"] },
+    "aliases": { "type": "array", "items": { "type": "string" } },
+
     "prerequisites": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": { "type": "string", "pattern": "^concept\\.[a-z0-9-]+$" },
       "description": "IDs of concept files this topic depends on"
     },
     "mechanism_family": {
       "type": "string",
+      "pattern": "^mechanism\\.[a-z0-9-]+$",
       "description": "ID of the mechanism family this topic belongs to"
+    },
+
+    "learning_objectives": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Observable technical actions the learner can perform after studying this topic"
+    },
+
+    "safety_contract": {
+      "type": "object",
+      "required": [
+        "authorization_assumption",
+        "scope_constraints",
+        "side_effect_risk",
+        "data_exposure_risk",
+        "stop_conditions",
+        "safer_alternative"
+      ],
+      "properties": {
+        "authorization_assumption": { "type": "string" },
+        "scope_constraints": { "type": "array", "items": { "type": "string" } },
+        "side_effect_risk": { "type": "string", "enum": ["none", "low", "medium", "high"] },
+        "data_exposure_risk": { "type": "string", "enum": ["none", "low", "medium", "high"] },
+        "stop_conditions": { "type": "array", "items": { "type": "string" } },
+        "safer_alternative": { "type": "string" }
+      }
+    },
+
+    "implementation_variance": {
+      "type": "object",
+      "required": ["applies_when", "does_not_apply_when", "variance_notes"],
+      "properties": {
+        "applies_when": { "type": "array", "items": { "type": "string" } },
+        "does_not_apply_when": { "type": "array", "items": { "type": "string" } },
+        "variance_notes": { "type": "array", "items": { "type": "string" } }
+      }
     },
 
     "mental_model": {
       "type": "object",
       "required": ["one_sentence", "short_explanation", "diagram"],
       "properties": {
-        "one_sentence": { "type": "string", "description": "Core mechanism in one sentence" },
-        "short_explanation": { "type": "string", "description": "3-5 sentence explanation" },
-        "diagram": { "type": "string", "description": "ASCII/text diagram of the core mechanism" },
+        "one_sentence": { "type": "string" },
+        "short_explanation": { "type": "string" },
+        "diagram": { "type": "string" },
         "analogy": {
           "type": "object",
           "properties": {
@@ -56,10 +109,10 @@
       "type": "object",
       "required": ["statement", "why_it_matters", "violation_condition", "investigation_question"],
       "properties": {
-        "statement": { "type": "string", "description": "The security property that must hold" },
+        "statement": { "type": "string" },
         "why_it_matters": { "type": "string" },
-        "violation_condition": { "type": "string", "description": "What makes the invariant false" },
-        "investigation_question": { "type": "string", "description": "The question a pentester should ask" }
+        "violation_condition": { "type": "string" },
+        "investigation_question": { "type": "string" }
       }
     },
 
@@ -85,11 +138,7 @@
       "type": "object",
       "required": ["steps"],
       "properties": {
-        "steps": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Ordered causal chain: what happens step by step"
-        },
+        "steps": { "type": "array", "items": { "type": "string" } },
         "data_flow": {
           "type": "object",
           "properties": {
@@ -102,7 +151,6 @@
         },
         "trust_transformation": {
           "type": "object",
-          "description": "How attacker data changes meaning through interpretation",
           "properties": {
             "attacker_data": { "type": "string" },
             "parser_or_interpreter": { "type": "string" },
@@ -119,33 +167,28 @@
       "required": ["conditions"],
       "properties": {
         "conditions": {
-          "description": "Boolean logic gate — supports AND/OR nesting",
-          "oneOf": [
-            {
-              "type": "array",
-              "items": {
-                "oneOf": [
-                  {
-                    "type": "object",
-                    "required": ["condition"],
-                    "properties": {
-                      "condition": { "type": "string" },
-                      "how_to_test": { "type": "string" }
-                    }
-                  },
-                  {
-                    "type": "object",
-                    "required": ["operator", "conditions"],
-                    "properties": {
-                      "operator": { "type": "string", "enum": ["AND", "OR"] },
-                      "label": { "type": "string" },
-                      "conditions": { "type": "array" }
-                    }
-                  }
-                ]
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": ["condition"],
+                "properties": {
+                  "condition": { "type": "string" },
+                  "how_to_test": { "type": "string" }
+                }
+              },
+              {
+                "type": "object",
+                "required": ["operator", "conditions"],
+                "properties": {
+                  "operator": { "type": "string", "enum": ["AND", "OR"] },
+                  "label": { "type": "string" },
+                  "conditions": { "type": "array" }
+                }
               }
-            }
-          ]
+            ]
+          }
         },
         "gate_rule": { "type": "string" }
       }
@@ -155,11 +198,7 @@
       "type": "object",
       "required": ["attack_surface", "hypotheses", "minimal_experiments"],
       "properties": {
-        "attack_surface": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Where to look for this vulnerability class"
-        },
+        "attack_surface": { "type": "array", "items": { "type": "string" } },
         "hypotheses": {
           "type": "array",
           "items": {
@@ -212,7 +251,8 @@
             "type": "object",
             "properties": {
               "strength": { "type": "string", "enum": ["strong", "moderate", "weak", "insufficient"] },
-              "evidence": { "type": "string" }
+              "evidence": { "type": "string" },
+              "tier": { "type": "string", "enum": ["observed", "strongly_supported", "plausible", "unknown"] }
             }
           }
         },
@@ -224,7 +264,7 @@
       "type": "object",
       "required": ["primitive", "capabilities"],
       "properties": {
-        "primitive": { "type": "string", "description": "The basic capability gained" },
+        "primitive": { "type": "string" },
         "capabilities": {
           "type": "array",
           "items": {
@@ -238,8 +278,22 @@
         },
         "impact_conditions": {
           "type": "array",
-          "items": { "type": "string" },
-          "description": "What determines actual severity"
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "defense_analysis": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["defense", "assumption", "what_must_remain_true", "how_assumption_fails", "investigation"],
+        "properties": {
+          "defense": { "type": "string" },
+          "assumption": { "type": "string" },
+          "what_must_remain_true": { "type": "string" },
+          "how_assumption_fails": { "type": "string" },
+          "investigation": { "type": "string" }
         }
       }
     },
@@ -285,11 +339,27 @@
       }
     },
 
+    "variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "condition", "mechanism_detail"],
+        "properties": {
+          "name": { "type": "string" },
+          "condition": { "type": "string" },
+          "mechanism_detail": { "type": "string" },
+          "investigation_difference": { "type": "string" },
+          "how_to_identify": { "type": "string" },
+          "how_to_confirm": { "type": "string" }
+        }
+      }
+    },
+
     "transfer": {
       "type": "object",
       "required": ["shared_mechanism", "related_topics", "new_contexts"],
       "properties": {
-        "shared_mechanism": { "type": "string", "description": "The transferable principle" },
+        "shared_mechanism": { "type": "string" },
         "related_topics": {
           "type": "array",
           "items": {
@@ -300,13 +370,13 @@
             }
           }
         },
-        "new_contexts": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Where else this mechanism could appear"
-        }
+        "transferable_reasoning": { "type": "string" },
+        "new_contexts": { "type": "array", "items": { "type": "string" } }
       }
     },
+
+    "claims_ref": { "type": "string" },
+    "assessment_ref": { "type": "string" },
 
     "sources": {
       "type": "array",
@@ -316,14 +386,12 @@
         "properties": {
           "id": { "type": "string" },
           "title": { "type": "string" },
-          "url": { "type": "string", "format": "uri" },
+          "url": { "type": "string" },
           "tier": { "type": "integer", "minimum": 1, "maximum": 5 },
-          "claim": { "type": "string", "description": "What specific claim this source supports" },
+          "claim": { "type": "string" },
           "retrieved_this_pass": { "type": "boolean" }
         }
       }
     }
-  },
-
-  "additionalProperties": true
+  }
 }

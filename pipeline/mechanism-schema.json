@@ -1,44 +1,87 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Lengine Mechanism Family",
-  "description": "A reusable causal pattern that connects multiple vulnerability classes.",
+  "title": "Lengine Mechanism Family (v2.0)",
+  "description": "Schema for reusable causal templates with a defined minimum causal signature.",
   "type": "object",
-  "required": ["mechanism", "display_name", "core_principle", "conditions", "members", "investigation_question", "defensive_implication"],
+  "required": [
+    "schema_version",
+    "mechanism_id",
+    "display_name",
+    "status",
+    "core_principle",
+    "minimum_causal_signature",
+    "conditions",
+    "members",
+    "investigation_question",
+    "defensive_implication",
+    "common_manifestations",
+    "related_concepts",
+    "sources"
+  ],
   "properties": {
-    "mechanism": { "type": "string", "description": "URL-safe slug identifier" },
+    "schema_version": { "type": "string", "enum": ["2.0"] },
+    "mechanism_id": { "type": "string", "pattern": "^mechanism\\.[a-z0-9-]+$" },
     "display_name": { "type": "string" },
-    "core_principle": { "type": "string", "description": "The reusable causal explanation" },
+    "status": { "type": "string", "enum": ["draft", "in_review", "approved", "deprecated"] },
+    "core_principle": { "type": "string" },
+    "minimum_causal_signature": {
+      "type": "object",
+      "required": [
+        "components_involved",
+        "authority_transition",
+        "security_decision_bypassed",
+        "failure_condition"
+      ],
+      "properties": {
+        "components_involved": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actors, parsers, layers, or subsystems involved"
+        },
+        "authority_transition": {
+          "type": "string",
+          "description": "How data changes meaning or how authority is transferred across boundaries"
+        },
+        "security_decision_bypassed": {
+          "type": "string",
+          "description": "The check or access decision that fails to constrain the operation"
+        },
+        "failure_condition": {
+          "type": "string",
+          "description": "The exact technical condition under which the security property fails"
+        }
+      }
+    },
     "conditions": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "What must be true for this mechanism to apply"
+      "items": { "type": "string" }
     },
     "members": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Topic IDs that belong to this family"
+      "description": "Topic IDs (e.g. topic.ssrf, topic.xxe) that instantiate this mechanism"
     },
-    "investigation_question": { "type": "string", "description": "The question that identifies whether this mechanism might apply" },
-    "defensive_implication": { "type": "string", "description": "How to prevent this class of mechanism" },
+    "investigation_question": { "type": "string" },
+    "defensive_implication": { "type": "string" },
     "common_manifestations": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "Common ways this mechanism appears in practice"
+      "items": { "type": "string" }
     },
     "related_concepts": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Concept IDs relevant to understanding this mechanism"
+      "description": "Concept IDs (e.g. concept.url-parsing)"
     },
     "sources": {
       "type": "array",
       "items": {
         "type": "object",
+        "required": ["id", "title", "url", "tier", "claim", "retrieved_this_pass"],
         "properties": {
           "id": { "type": "string" },
           "title": { "type": "string" },
           "url": { "type": "string" },
-          "tier": { "type": "integer" },
+          "tier": { "type": "integer", "minimum": 1, "maximum": 5 },
           "claim": { "type": "string" },
           "retrieved_this_pass": { "type": "boolean" }
         }

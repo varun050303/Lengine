@@ -1,0 +1,57 @@
+{
+  "pass": 3,
+  "topic_id": "topic.ssrf",
+  "arbitration_date": "2026-09-07",
+  "decisions": [
+    {
+      "issue_id": "ISSUE-01",
+      "decision": "accept",
+      "evidence_basis": "source",
+      "resolution": "Updated capability chain and impact conditions in topic.json to explicitly explain IMDSv2 token handshake (PUT with X-aws-ec2-metadata-token-ttl-seconds) and contrast with GET-only SSRF sinks."
+    },
+    {
+      "issue_id": "ISSUE-02",
+      "decision": "accept",
+      "evidence_basis": "expert_judgment",
+      "resolution": "Added complete defense_analysis table modeling IP blocklist, hostname allowlist, DNS validation, and network segmentation through their core assumptions and failure modes."
+    },
+    {
+      "issue_id": "ISSUE-03",
+      "decision": "accept",
+      "evidence_basis": "expert_judgment",
+      "resolution": "Added blind SSRF variant detailing OOB callback confirmation, socket timing differentials (connect vs timeout), and state-changing side-effects."
+    },
+    {
+      "issue_id": "ISSUE-04",
+      "decision": "accept",
+      "evidence_basis": "expert_judgment",
+      "resolution": "Added explicit variants section distinguishing full-response and blind SSRF with concrete identification and confirmation criteria."
+    },
+    {
+      "issue_id": "ISSUE-05",
+      "decision": "accept",
+      "evidence_basis": "expert_judgment",
+      "resolution": "Updated confirmation guidance, investigation experiments, and safety contract to mandate directory listing root (/latest/meta-data/) as safe discovery, reserving credential path for authorized impact proof."
+    },
+    {
+      "issue_id": "ISSUE-06",
+      "decision": "accept",
+      "evidence_basis": "source",
+      "resolution": "Updated S1 citation and causal mechanism text with explicit RFC 3986 section references: §3.2 (Authority), §3.2.1 (User Information), and §2.1 (Percent-Encoding)."
+    },
+    {
+      "issue_id": "ISSUE-07",
+      "decision": "accept",
+      "evidence_basis": "learner_test",
+      "resolution": "Created dedicated assessment.json with the novel Chromium container thumbnailing to internal gRPC service scenario, complete with a 6-dimension scoring rubric."
+    },
+    {
+      "issue_id": "ISSUE-08",
+      "decision": "accept",
+      "evidence_basis": "expert_judgment",
+      "resolution": "Added transferable_reasoning chain connecting concept.url-parsing and concept.network-trust-boundaries directly to unfamiliar candidate surfaces."
+    }
+  ],
+  "unresolved_blocking_issues": 0,
+  "verdict": "approved_for_pass_4"
+}

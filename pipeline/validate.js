@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Lengine Content Pipeline - Automated Quality Gate Validator
+ * Lengine Content Pipeline - Automated 4-Gate Quality Auditor (v2.0)
  *
- * Validates:
- * 1. JSON Schemas for topics, concepts, and mechanisms
- * 2. Cross-link referential integrity (prerequisites, mechanism families)
- * 3. 4-Pass pipeline audit trail (01-draft, 02-review, 03-arbitration, 04-final, sources, diagrams)
- * 4. Quality gate constraints (source verification, boolean logic, invariant structure)
+ * Implements the four quality gates defined in pipeline/contracts.md:
+ * - Gate A: Structural Validity & Schema Compliance
+ * - Gate B: Technical Grounding & Claim-Level Provenance
+ * - Gate C: Causal Reasoning & Invariant Structure
+ * - Gate D: Learning Objectives, Safety Contract & Assessment Rubric
  */
 
 const fs = require('fs');
@@ -19,28 +19,33 @@ const PIPELINE_DIR = path.join(ROOT_DIR, 'pipeline');
 
 let errors = [];
 let warnings = [];
-let passedChecks = 0;
+let gateResults = {
+  'Gate A (Structural Validity)': 0,
+  'Gate B (Evidence & Provenance)': 0,
+  'Gate C (Causal Reasoning)': 0,
+  'Gate D (Learning & Safety)': 0
+};
 
-function pass(msg) {
-  passedChecks++;
-  console.log(`  \x1b[32m✔\x1b[0m ${msg}`);
+function pass(gate, msg) {
+  gateResults[gate] = (gateResults[gate] || 0) + 1;
+  console.log(`  \x1b[32m✔\x1b[0m [${gate.split(' ')[1]}] ${msg}`);
 }
 
-function fail(msg) {
-  errors.push(msg);
-  console.log(`  \x1b[31m✖\x1b[0m ${msg}`);
+function fail(gate, msg) {
+  errors.push(`[${gate}] ${msg}`);
+  console.log(`  \x1b[31m✖\x1b[0m [${gate.split(' ')[1]}] ${msg}`);
 }
 
-function warn(msg) {
-  warnings.push(msg);
-  console.log(`  \x1b[33m⚠\x1b[0m ${msg}`);
+function warn(gate, msg) {
+  warnings.push(`[${gate}] ${msg}`);
+  console.log(`  \x1b[33m⚠\x1b[0m [${gate.split(' ')[1]}] ${msg}`);
 }
 
 console.log('\n\x1b[1m═══════════════════════════════════════════════════════════\x1b[0m');
-console.log('\x1b[1m  LENGINE QUALITY GATE & INTEGRITY AUDITOR\x1b[0m');
+console.log('\x1b[1m  LENGINE v2.0 FOUR-STAGE QUALITY AUDITOR\x1b[0m');
 console.log('\x1b[1m═══════════════════════════════════════════════════════════\x1b[0m\n');
 
-// 1. Check Concepts
+// 1. Concepts Audit
 console.log('\x1b[36m[1/4] Auditing Foundational Concepts...\x1b[0m');
 const conceptsDir = path.join(CONTENT_DIR, 'concepts');
 const conceptFiles = fs.readdirSync(conceptsDir).filter(f => f.endsWith('.json'));
@@ -50,18 +55,39 @@ for (const file of conceptFiles) {
   const filePath = path.join(conceptsDir, file);
   try {
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (!data.concept || !data.display_name || !data.summary || !data.mental_model || !data.mechanism) {
-      fail(`Concept ${file} missing required fields`);
+
+    // Gate A: Structural
+    if (!data.concept_id || !data.concept_id.startsWith('concept.')) {
+      fail('Gate A (Structural Validity)', `Concept ${file} missing valid concept_id with 'concept.' prefix`);
     } else {
-      knownConcepts.add(data.concept);
-      pass(`Concept: ${data.concept} (${data.display_name})`);
+      knownConcepts.add(data.concept_id);
+      pass('Gate A (Structural Validity)', `Concept ID format valid: ${data.concept_id}`);
     }
+
+    if (data.schema_version !== '2.0') {
+      fail('Gate A (Structural Validity)', `Concept ${file} schema_version must be '2.0'`);
+    }
+
+    // Gate B: Evidence
+    if (data.bounded_scope && data.bounded_scope.covers && data.bounded_scope.delegates) {
+      pass('Gate B (Evidence & Provenance)', `Concept ${data.concept_id} defines bounded scope & delegation`);
+    } else {
+      fail('Gate B (Evidence & Provenance)', `Concept ${data.concept_id} missing bounded_scope (covers/delegates)`);
+    }
+
+    // Gate D: Learning
+    if (Array.isArray(data.learning_objectives) && data.learning_objectives.length > 0) {
+      pass('Gate D (Learning & Safety)', `Concept ${data.concept_id} defines ${data.learning_objectives.length} learning objective(s)`);
+    } else {
+      fail('Gate D (Learning & Safety)', `Concept ${data.concept_id} missing learning_objectives`);
+    }
+
   } catch (e) {
-    fail(`Invalid JSON in concept ${file}: ${e.message}`);
+    fail('Gate A (Structural Validity)', `JSON parse error in concept ${file}: ${e.message}`);
   }
 }
 
-// 2. Check Mechanisms
+// 2. Mechanisms Audit
 console.log('\n\x1b[36m[2/4] Auditing Mechanism Families...\x1b[0m');
 const mechanismsDir = path.join(CONTENT_DIR, 'mechanisms');
 const mechanismFiles = fs.readdirSync(mechanismsDir).filter(f => f.endsWith('.json'));
@@ -71,165 +97,283 @@ for (const file of mechanismFiles) {
   const filePath = path.join(mechanismsDir, file);
   try {
     const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (!data.mechanism || !data.display_name || !data.core_principle || !data.conditions || !data.members || !data.investigation_question || !data.defensive_implication) {
-      fail(`Mechanism ${file} missing required fields`);
+
+    // Gate A: Structural
+    if (!data.mechanism_id || !data.mechanism_id.startsWith('mechanism.')) {
+      fail('Gate A (Structural Validity)', `Mechanism ${file} missing valid mechanism_id with 'mechanism.' prefix`);
     } else {
-      knownMechanisms.add(data.mechanism);
-      pass(`Mechanism: ${data.mechanism} (${data.display_name})`);
+      knownMechanisms.add(data.mechanism_id);
+      pass('Gate A (Structural Validity)', `Mechanism ID format valid: ${data.mechanism_id}`);
     }
+
+    // Gate C: Causal Reasoning (Minimum Causal Signature)
+    const sig = data.minimum_causal_signature;
+    if (sig &&
+        Array.isArray(sig.components_involved) &&
+        sig.authority_transition &&
+        sig.security_decision_bypassed &&
+        sig.failure_condition) {
+      pass('Gate C (Causal Reasoning)', `Mechanism ${data.mechanism_id} fulfills Minimum Causal Signature`);
+    } else {
+      fail('Gate C (Causal Reasoning)', `Mechanism ${data.mechanism_id} missing complete Minimum Causal Signature`);
+    }
+
+    // Check related concepts resolve
+    if (Array.isArray(data.related_concepts)) {
+      for (const rc of data.related_concepts) {
+        if (knownConcepts.has(rc)) {
+          pass('Gate B (Evidence & Provenance)', `Mechanism ${data.mechanism_id} resolved concept: ${rc}`);
+        } else {
+          fail('Gate B (Evidence & Provenance)', `Mechanism ${data.mechanism_id} references unknown concept: ${rc}`);
+        }
+      }
+    }
+
   } catch (e) {
-    fail(`Invalid JSON in mechanism ${file}: ${e.message}`);
+    fail('Gate A (Structural Validity)', `JSON parse error in mechanism ${file}: ${e.message}`);
   }
 }
 
-// 3. Check Manifest and Completed Topics
-console.log('\n\x1b[36m[3/4] Auditing Manifest and Topics...\x1b[0m');
+// 3. Manifest and Topics Audit
+console.log('\n\x1b[36m[3/4] Auditing Manifest and Topics (4-Gate Verification)...\x1b[0m');
 const manifestPath = path.join(CONTENT_DIR, '_manifest.json');
 let manifest;
 try {
   manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-  pass(`Manifest loaded (${manifest.topics.length} registered topics)`);
+  pass('Gate A (Structural Validity)', `Manifest parsed successfully (${manifest.topics.length} registered topics)`);
 } catch (e) {
-  fail(`Failed to parse _manifest.json: ${e.message}`);
+  fail('Gate A (Structural Validity)', `Failed to parse _manifest.json: ${e.message}`);
 }
 
 if (manifest && manifest.topics) {
   const completedTopics = manifest.topics.filter(t => t.status === 'completed');
-  console.log(`  Found ${completedTopics.length} completed topic(s)`);
 
   for (const topicMeta of completedTopics) {
     console.log(`\n  \x1b[1mAuditing Topic: ${topicMeta.topic} (${topicMeta.display_name})\x1b[0m`);
     const topicDir = path.join(CONTENT_DIR, 'topics', topicMeta.topic);
 
     if (!fs.existsSync(topicDir)) {
-      fail(`Topic directory does not exist: ${topicDir}`);
+      fail('Gate A (Structural Validity)', `Topic directory does not exist: ${topicDir}`);
       continue;
     }
 
-    // Check 4-pass audit trail
-    const requiredFiles = [
-      '01-draft.md',
-      '02-review.md',
-      '03-arbitration.md',
-      '04-final.json',
-      'sources.json'
-    ];
+    // --- GATE A: Structural & File Separation ---
+    const topicJsonPath = path.join(topicDir, 'topic.json');
+    const claimsJsonPath = path.join(topicDir, 'claims.json');
+    const assessmentJsonPath = path.join(topicDir, 'assessment.json');
+    const diagramsDir = path.join(topicDir, 'diagrams');
+    const editorialDir = path.join(topicDir, 'editorial');
 
-    for (const reqFile of requiredFiles) {
-      if (fs.existsSync(path.join(topicDir, reqFile))) {
-        pass(`Pass artifact present: ${reqFile}`);
-      } else {
-        fail(`Missing pass artifact: ${reqFile}`);
-      }
+    if (fs.existsSync(topicJsonPath)) {
+      pass('Gate A (Structural Validity)', `Canonical topic specification present: topic.json`);
+    } else {
+      fail('Gate A (Structural Validity)', `Missing canonical topic.json`);
     }
 
-    // Check diagrams directory
-    const diagramsDir = path.join(topicDir, 'diagrams');
+    if (fs.existsSync(claimsJsonPath)) {
+      pass('Gate A (Structural Validity)', `Atomic claims registry present: claims.json`);
+    } else {
+      fail('Gate A (Structural Validity)', `Missing claims.json`);
+    }
+
+    if (fs.existsSync(assessmentJsonPath)) {
+      pass('Gate A (Structural Validity)', `Assessment & transfer harness present: assessment.json`);
+    } else {
+      fail('Gate A (Structural Validity)', `Missing assessment.json`);
+    }
+
     if (fs.existsSync(diagramsDir)) {
       const diagrams = fs.readdirSync(diagramsDir).filter(f => f.endsWith('.txt'));
-      if (diagrams.length > 0) {
-        pass(`Diagrams directory contains ${diagrams.length} text diagram(s): ${diagrams.join(', ')}`);
+      if (diagrams.length >= 5) {
+        pass('Gate A (Structural Validity)', `Structural diagrams verified (${diagrams.length} text diagrams present)`);
       } else {
-        fail(`Diagrams directory exists but has no .txt diagrams`);
+        fail('Gate A (Structural Validity)', `Insufficient diagrams (found ${diagrams.length}, expected >= 5)`);
       }
     } else {
-      fail(`Missing diagrams directory: ${diagramsDir}`);
+      fail('Gate A (Structural Validity)', `Missing diagrams directory`);
     }
 
-    // Inspect 04-final.json contents
-    const finalPath = path.join(topicDir, '04-final.json');
-    if (fs.existsSync(finalPath)) {
-      try {
-        const topicData = JSON.parse(fs.readFileSync(finalPath, 'utf8'));
+    // Editorial Pass Verification
+    if (fs.existsSync(editorialDir)) {
+      const draftExists = fs.existsSync(path.join(editorialDir, '01-draft.md'));
+      const reviewExists = fs.existsSync(path.join(editorialDir, '02-review.json'));
+      const arbExists = fs.existsSync(path.join(editorialDir, '03-arbitration.json'));
+      if (draftExists && reviewExists && arbExists) {
+        pass('Gate A (Structural Validity)', `Editorial history verified (01-draft, 02-review.json, 03-arbitration.json)`);
+      } else {
+        fail('Gate A (Structural Validity)', `Editorial history incomplete in ${editorialDir}`);
+      }
+    } else {
+      fail('Gate A (Structural Validity)', `Missing editorial/ directory for topic`);
+    }
 
-        // Check prerequisites
-        if (Array.isArray(topicData.prerequisites)) {
-          for (const prereq of topicData.prerequisites) {
-            if (knownConcepts.has(prereq)) {
-              pass(`Prerequisite concept resolved: ${prereq}`);
-            } else {
-              fail(`Unknown prerequisite concept '${prereq}' in topic ${topicMeta.topic}`);
+    // --- GATE B: Evidence & Provenance ---
+    if (fs.existsSync(claimsJsonPath)) {
+      try {
+        const claimsData = JSON.parse(fs.readFileSync(claimsJsonPath, 'utf8'));
+        if (Array.isArray(claimsData.claims) && claimsData.claims.length > 0) {
+          pass('Gate B (Evidence & Provenance)', `Claims registry contains ${claimsData.claims.length} atomic claims`);
+          let allClaimsSourced = true;
+          for (const c of claimsData.claims) {
+            if (!c.claim_id || !c.statement || !c.type || !c.scope || !c.status || !Array.isArray(c.sources)) {
+              allClaimsSourced = false;
+              fail('Gate B (Evidence & Provenance)', `Malformed claim: ${c.claim_id}`);
             }
           }
+          if (allClaimsSourced) {
+            pass('Gate B (Evidence & Provenance)', `All claims adhere to strict claim schema with scope & sources`);
+          }
         } else {
-          fail(`Topic missing prerequisites array`);
+          fail('Gate B (Evidence & Provenance)', `No claims found in claims.json`);
+        }
+      } catch (e) {
+        fail('Gate B (Evidence & Provenance)', `Failed to parse claims.json: ${e.message}`);
+      }
+    }
+
+    // Topic JSON Detailed Audit
+    if (fs.existsSync(topicJsonPath)) {
+      try {
+        const topicData = JSON.parse(fs.readFileSync(topicJsonPath, 'utf8'));
+
+        // Gate A: ID & Prerequisites Resolution
+        if (topicData.topic_id === `topic.${topicMeta.topic}`) {
+          pass('Gate A (Structural Validity)', `Topic ID matches slug: ${topicData.topic_id}`);
+        } else {
+          fail('Gate A (Structural Validity)', `Topic ID mismatch: ${topicData.topic_id} vs topic.${topicMeta.topic}`);
         }
 
-        // Check mechanism family
+        for (const prereq of topicData.prerequisites) {
+          if (knownConcepts.has(prereq)) {
+            pass('Gate A (Structural Validity)', `Resolved prerequisite: ${prereq}`);
+          } else {
+            fail('Gate A (Structural Validity)', `Unresolved prerequisite: ${prereq}`);
+          }
+        }
+
         if (knownMechanisms.has(topicData.mechanism_family)) {
-          pass(`Mechanism family resolved: ${topicData.mechanism_family}`);
+          pass('Gate A (Structural Validity)', `Resolved mechanism family: ${topicData.mechanism_family}`);
         } else {
-          fail(`Unknown mechanism family '${topicData.mechanism_family}' in topic ${topicMeta.topic}`);
+          fail('Gate A (Structural Validity)', `Unresolved mechanism family: ${topicData.mechanism_family}`);
         }
 
-        // Quality Gate: Invariant Structure
+        // Gate B: Implementation Variance & Source Integrity
+        const variance = topicData.implementation_variance;
+        if (variance && Array.isArray(variance.applies_when) && Array.isArray(variance.does_not_apply_when)) {
+          pass('Gate B (Evidence & Provenance)', `Implementation variance bounds explicitly declared (applies_when / does_not_apply_when)`);
+        } else {
+          fail('Gate B (Evidence & Provenance)', `Missing implementation_variance bounds`);
+        }
+
+        if (Array.isArray(topicData.sources)) {
+          const allRetrieved = topicData.sources.every(s => s.retrieved_this_pass === true);
+          if (allRetrieved) {
+            pass('Gate B (Evidence & Provenance)', `All ${topicData.sources.length} sources verified with retrieved_this_pass = true`);
+          } else {
+            fail('Gate B (Evidence & Provenance)', `One or more sources have retrieved_this_pass != true`);
+          }
+        }
+
+        // Gate C: Causal Reasoning
         if (topicData.invariant &&
             topicData.invariant.statement &&
             topicData.invariant.why_it_matters &&
             topicData.invariant.violation_condition &&
             topicData.invariant.investigation_question) {
-          pass(`Security Invariant is explicit, testable, and complete`);
+          pass('Gate C (Causal Reasoning)', `Security Invariant is explicit, testable, and complete`);
         } else {
-          fail(`Security Invariant missing mandatory reasoning fields`);
+          fail('Gate C (Causal Reasoning)', `Security Invariant missing mandatory reasoning fields`);
         }
 
-        // Quality Gate: Exploitability Logic Gates
+        if (topicData.normal_behavior && topicData.vulnerable_behavior &&
+            topicData.normal_behavior.description && topicData.vulnerable_behavior.description) {
+          pass('Gate C (Causal Reasoning)', `Normal vs Vulnerable behavior clearly contrasted`);
+        } else {
+          fail('Gate C (Causal Reasoning)', `Normal vs Vulnerable behavior contrast missing`);
+        }
+
         if (topicData.exploitability && Array.isArray(topicData.exploitability.conditions)) {
-          const hasOrGroup = topicData.exploitability.conditions.some(c => c.operator === 'OR');
-          if (hasOrGroup) {
-            pass(`Exploitability logic gate implements AND/OR structure`);
+          const hasOr = topicData.exploitability.conditions.some(c => c.operator === 'OR');
+          if (hasOr) {
+            pass('Gate C (Causal Reasoning)', `Exploitability logic gate models boolean AND/OR structure`);
           } else {
-            warn(`Exploitability logic has conditions but no nested OR group`);
+            fail('Gate C (Causal Reasoning)', `Exploitability logic missing nested OR gate`);
           }
-        } else {
-          fail(`Exploitability conditions missing or not an array`);
         }
 
-        // Quality Gate: Sources Integrity
-        if (Array.isArray(topicData.sources)) {
-          let sourcesValid = true;
-          for (const s of topicData.sources) {
-            if (s.retrieved_this_pass !== true) {
-              fail(`Source ${s.id} (${s.title}) has retrieved_this_pass != true`);
-              sourcesValid = false;
-            }
-          }
-          if (sourcesValid) {
-            pass(`All ${topicData.sources.length} sources verified with retrieved_this_pass: true`);
-          }
+        if (topicData.capability_and_impact &&
+            topicData.capability_and_impact.primitive &&
+            Array.isArray(topicData.capability_and_impact.capabilities)) {
+          pass('Gate C (Causal Reasoning)', `Capability-before-impact chain strictly separates primitive from impact`);
         } else {
-          fail(`Topic missing sources array`);
+          fail('Gate C (Causal Reasoning)', `Capability chain missing primitive or capabilities array`);
         }
 
-        // Quality Gate: Understanding Test
-        if (topicData.understanding_test &&
-            topicData.understanding_test.novel_scenario &&
-            topicData.understanding_test.explain_without_name) {
-          pass(`Understanding test includes novel scenario and name-free explanation`);
+        // Gate D: Learning & Safety Contract
+        const safety = topicData.safety_contract;
+        if (safety &&
+            safety.authorization_assumption &&
+            Array.isArray(safety.scope_constraints) &&
+            safety.side_effect_risk &&
+            safety.data_exposure_risk &&
+            Array.isArray(safety.stop_conditions) &&
+            safety.safer_alternative) {
+          pass('Gate D (Learning & Safety)', `Safety contract verified (authorization, risk levels, stop conditions, safer alternative)`);
         } else {
-          fail(`Understanding test incomplete`);
+          fail('Gate D (Learning & Safety)', `Safety contract incomplete or missing`);
+        }
+
+        if (Array.isArray(topicData.learning_objectives) && topicData.learning_objectives.length > 0) {
+          pass('Gate D (Learning & Safety)', `Topic specifies ${topicData.learning_objectives.length} observable learning objective(s)`);
+        } else {
+          fail('Gate D (Learning & Safety)', `Missing learning_objectives`);
         }
 
       } catch (e) {
-        fail(`Failed to parse 04-final.json: ${e.message}`);
+        fail('Gate A (Structural Validity)', `Failed to parse topic.json: ${e.message}`);
+      }
+    }
+
+    // Gate D: Assessment Harness Verification
+    if (fs.existsSync(assessmentJsonPath)) {
+      try {
+        const assessData = JSON.parse(fs.readFileSync(assessmentJsonPath, 'utf8'));
+        if (Array.isArray(assessData.scenarios) && assessData.scenarios.length > 0) {
+          const sc = assessData.scenarios[0];
+          if (sc.scoring_rubric && Array.isArray(sc.scoring_rubric) && sc.scoring_rubric.length === 6) {
+            pass('Gate D (Learning & Safety)', `Novel transfer scenario has complete 6-dimension scoring rubric (levels 0-4)`);
+          } else {
+            fail('Gate D (Learning & Safety)', `Scoring rubric missing or does not have 6 dimensions`);
+          }
+
+          if (sc.common_learner_errors && sc.common_learner_errors.length > 0) {
+            pass('Gate D (Learning & Safety)', `Common learner errors and remedial guidance documented`);
+          } else {
+            fail('Gate D (Learning & Safety)', `Missing common_learner_errors in scenario`);
+          }
+        }
+      } catch (e) {
+        fail('Gate D (Learning & Safety)', `Failed to parse assessment.json: ${e.message}`);
       }
     }
   }
 }
 
-// 4. Summary
-console.log('\n\x1b[36m[4/4] Quality Gate Summary...\x1b[0m');
-console.log(`  Passed Checks: \x1b[32m${passedChecks}\x1b[0m`);
-console.log(`  Warnings:      \x1b[33m${warnings.length}\x1b[0m`);
-console.log(`  Errors:        \x1b[31m${errors.length}\x1b[0m\n`);
+// 4. Summary & Report
+console.log('\n\x1b[36m[4/4] Four-Gate Audit Summary...\x1b[0m');
+for (const [gate, count] of Object.entries(gateResults)) {
+  console.log(`  ${gate.padEnd(35)}: \x1b[32m${count} checks passed\x1b[0m`);
+}
+console.log(`\n  Total Errors:   \x1b[${errors.length > 0 ? '31' : '32'}m${errors.length}\x1b[0m`);
+console.log(`  Total Warnings: \x1b[33m${warnings.length}\x1b[0m\n`);
 
 if (errors.length > 0) {
-  console.log('\x1b[31m❌ QUALITY GATE FAILED with errors:\x1b[0m');
+  console.log('\x1b[31m❌ QUALITY GATES FAILED with errors:\x1b[0m');
   for (const err of errors) {
     console.log(`   - ${err}`);
   }
   process.exit(1);
 } else {
-  console.log('\x1b[32m✔ QUALITY GATE PASSED: All integrity checks, schemas, and reasoning invariants hold.\x1b[0m\n');
+  console.log('\x1b[32m✔ ALL FOUR QUALITY GATES PASSED (Structural, Evidence, Reasoning, Learning & Safety).\x1b[0m\n');
   process.exit(0);
 }

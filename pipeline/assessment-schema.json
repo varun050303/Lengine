@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lengine Assessment and Transfer Harness",
+  "description": "Schema for learner assessments, novel scenarios, and evaluation rubrics.",
+  "type": "object",
+  "required": ["schema_version", "topic_id", "learning_objectives", "scenarios"],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["2.0"] },
+    "topic_id": { "type": "string", "pattern": "^topic\\.[a-z0-9-]+$" },
+    "learning_objectives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "observable_action", "success_criteria"],
+        "properties": {
+          "id": { "type": "string" },
+          "observable_action": { "type": "string", "description": "What the learner does, not what they passively know" },
+          "success_criteria": { "type": "string" }
+        }
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "title",
+          "context_domain",
+          "prompt",
+          "expected_reasoning",
+          "scoring_rubric",
+          "common_learner_errors"
+        ],
+        "properties": {
+          "scenario_id": { "type": "string", "pattern": "^scenario\\.[a-z0-9-]+\\.[a-z0-9-]+$" },
+          "title": { "type": "string" },
+          "context_domain": { "type": "string" },
+          "prompt": {
+            "type": "object",
+            "required": ["setup", "task_question"],
+            "properties": {
+              "setup": { "type": "string" },
+              "task_question": { "type": "string" }
+            }
+          },
+          "expected_reasoning": {
+            "type": "object",
+            "required": [
+              "invariant_analysis",
+              "boundary_analysis",
+              "competing_hypotheses",
+              "minimal_safe_experiment",
+              "capability_calibration",
+              "remaining_uncertainties"
+            ],
+            "properties": {
+              "invariant_analysis": { "type": "string" },
+              "boundary_analysis": { "type": "string" },
+              "competing_hypotheses": { "type": "array", "items": { "type": "string" } },
+              "minimal_safe_experiment": { "type": "string" },
+              "capability_calibration": { "type": "string" },
+              "remaining_uncertainties": { "type": "string" }
+            }
+          },
+          "scoring_rubric": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["dimension", "description", "levels"],
+              "properties": {
+                "dimension": { "type": "string" },
+                "description": { "type": "string" },
+                "levels": {
+                  "type": "object",
+                  "required": ["0", "1", "2", "3", "4"],
+                  "properties": {
+                    "0": { "type": "string" },
+                    "1": { "type": "string" },
+                    "2": { "type": "string" },
+                    "3": { "type": "string" },
+                    "4": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "common_learner_errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["error", "why_it_fails", "remedial_guidance"],
+              "properties": {
+                "error": { "type": "string" },
+                "why_it_fails": { "type": "string" },
+                "remedial_guidance": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

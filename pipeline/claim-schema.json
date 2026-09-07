@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lengine Claims Registry",
+  "description": "Schema for atomic claim-level provenance supporting security topics.",
+  "type": "object",
+  "required": ["schema_version", "topic_id", "claims"],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["2.0"] },
+    "topic_id": { "type": "string", "pattern": "^topic\\.[a-z0-9-]+$" },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim_id", "statement", "type", "scope", "status", "sources"],
+        "properties": {
+          "claim_id": { "type": "string", "pattern": "^claim\\.[a-z0-9-]+\\.[a-z0-9-]+$" },
+          "statement": { "type": "string", "description": "The atomic testable proposition" },
+          "type": {
+            "type": "string",
+            "enum": ["technical_fact", "causal_claim", "implementation_variance", "defensive_guarantee"]
+          },
+          "scope": { "type": "string", "description": "Boundary conditions where this claim holds" },
+          "status": {
+            "type": "string",
+            "enum": ["supported", "derived", "illustrative", "disputed", "scope_dependent"]
+          },
+          "sources": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "IDs of supporting sources (e.g. S1, S2)"
+          },
+          "technical_disagreement": {
+            "type": "object",
+            "properties": {
+              "competing_view": { "type": "string" },
+              "why_disputed": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

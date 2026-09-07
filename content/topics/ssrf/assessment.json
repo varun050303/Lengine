@@ -1,0 +1,124 @@
+{
+  "schema_version": "2.0",
+  "topic_id": "topic.ssrf",
+  "learning_objectives": [
+    {
+      "id": "LO-SSRF-01",
+      "observable_action": "Given an unfamiliar application feature that takes a URL, derive a set of mutually exclusive hypotheses to determine whether fetching occurs client-side, via server-side proxy, or via third-party CDN.",
+      "success_criteria": "Learner designs an out-of-band listener test that distinguishes client, server, and third-party IP sources in one experiment."
+    },
+    {
+      "id": "LO-SSRF-02",
+      "observable_action": "Evaluate an application-layer defense against SSRF and identify the underlying assumption that causes it to fail (e.g. DNS rebinding, redirect following, or URI parser disagreement).",
+      "success_criteria": "Learner explains the specific TOCTOU or parser discrepancy enabling the bypass rather than guessing payloads."
+    },
+    {
+      "id": "LO-SSRF-03",
+      "observable_action": "Calibrate the established capability of an SSRF primitive against downstream impact without overstating conclusions.",
+      "success_criteria": "Learner cleanly distinguishes between network reachability, response observability, and cloud credential acquisition."
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "scenario.ssrf.thumbnail-grpc",
+      "title": "Containerized Headless Browser Rendering to Internal gRPC",
+      "context_domain": "Kubernetes Microservice Architecture",
+      "prompt": {
+        "setup": "A thumbnail generation microservice accepts a POST parameter `target_url`. Inside a Kubernetes pod, the service launches headless Chromium with `--no-sandbox` to render the page, saves a PNG screenshot to an S3 bucket, and returns a pre-signed S3 URL to the client. The HTTP response body of the target URL is never returned to the caller. Network policies allow the pod to initiate outbound TCP connections to an internal payment service running gRPC on `10.244.3.15:8443` and to external internet hosts.",
+        "task_question": "Analyze this architecture: (1) What capability has the attacker established? (2) What remains unproven or constrained? (3) Propose the minimal safe experiment to advance the investigation without risking state corruption on the payment service."
+      },
+      "expected_reasoning": {
+        "invariant_analysis": "The security invariant requires that external users cannot utilize the container's privileged internal network position to reach restricted services (the internal gRPC service or metadata endpoints).",
+        "boundary_analysis": "The trust boundary is crossed when Chromium in the container initiates connections from its internal pod IP (`10.244.x.x`) to `10.244.3.15:8443`, an internal endpoint unreachable from the public internet.",
+        "competing_hypotheses": [
+          "Hypothesis A: Chromium can establish TCP connections and render internal HTTP/HTTPS responses into the screenshot (visual exfiltration).",
+          "Hypothesis B: The payment service strictly speaks gRPC (HTTP/2 with protocol buffers) and will immediately reject/reset HTTP/1.1 requests from Chromium without rendering.",
+          "Hypothesis C: Network egress policies on the pod drop packets destined for internal RFC 1918 subnets, neutralizing the primitive."
+        ],
+        "minimal_safe_experiment": "Point `target_url` to an attacker-controlled external web server serving HTML that attempts an `<img>` fetch to `http://10.244.3.15:8443/` while capturing DNS/TCP callback telemetry, and inspect the generated screenshot for browser error messages (e.g. ERR_CONNECTION_REFUSED vs ERR_SSL_PROTOCOL_ERROR vs valid render).",
+        "capability_calibration": "The established primitive is blind SSRF via a full browser engine. The attacker has NOT established gRPC command execution, internal data reading, or credential theft; those depend on protocol compatibility and visual capture.",
+        "remaining_uncertainties": "Unknown whether JavaScript execution is enabled in Chromium; unknown whether gRPC responds to HTTP GET; unknown whether metadata IP is reachable from container network."
+      },
+      "scoring_rubric": [
+        {
+          "dimension": "Invariant Identification",
+          "description": "Ability to identify the protected security guarantee and its violation condition.",
+          "levels": {
+            "0": "Fails to identify any invariant; discusses general hacking tools or wordlists.",
+            "1": "Mentions that SSRF is bad or that internal networks should be private.",
+            "2": "Identifies that the container's network position is being used to reach internal addresses.",
+            "3": "Explicitly articulates that external input must not grant unauthorized network access to internal pod-reachable services.",
+            "4": "Formulates the exact invariant and defines the operational violation condition in terms of ambient pod authority."
+          }
+        },
+        {
+          "dimension": "Boundary Mapping",
+          "description": "Accuracy in mapping untrusted input through components to the trusted boundary.",
+          "levels": {
+            "0": "Does not understand where the request originates or assumes client browser makes the request.",
+            "1": "Recognizes that the container makes the request but confuses Kubernetes networking with local machine.",
+            "2": "Identifies the boundary between external internet and internal cluster IP space (10.244.x.x).",
+            "3": "Accurately traces flow: parameter -> microservice -> Chromium instance -> pod interface -> internal service.",
+            "4": "Traces full boundary flow and explicitly identifies ambient network authority granted to pod IP by cluster network policies."
+          }
+        },
+        {
+          "dimension": "Hypothesis Quality",
+          "description": "Formulation of falsifiable, mutually exclusive competing hypotheses.",
+          "levels": {
+            "0": "No hypotheses formulated; assumes instant total compromise.",
+            "1": "Single hypothesis that the service is vulnerable without alternative possibilities.",
+            "2": "Proposes two hypotheses but they are not clearly distinguished.",
+            "3": "Proposes distinct hypotheses covering network reachability vs protocol incompatibility (gRPC vs HTTP).",
+            "4": "Proposes comprehensive, mutually exclusive hypotheses accounting for network policies, protocol compatibility, and visual rendering."
+          }
+        },
+        {
+          "dimension": "Safe Experiment Selection",
+          "description": "Selection of minimal, non-destructive experiments producing maximum information gain.",
+          "levels": {
+            "0": "Proposes sending destructive payloads, brute forcing, or spamming gRPC methods.",
+            "1": "Proposes generic SSRF payloads from cheatsheets without regard for target architecture.",
+            "2": "Proposes using a callback server but does not address gRPC specificity.",
+            "3": "Designs a safe test using an attacker-controlled page to observe browser behavior and screenshot error codes.",
+            "4": "Designs a minimal, non-destructive test isolating network reachability from protocol parsing, with explicit stop conditions."
+          }
+        },
+        {
+          "dimension": "Capability Calibration",
+          "description": "Strict separation between demonstrated primitive and hypothetical impact.",
+          "levels": {
+            "0": "Equates thumbnail URL acceptance with full database takeover or remote code execution.",
+            "1": "Claims full SSRF without noting that response bodies are never returned to the caller.",
+            "2": "Identifies blind SSRF but assumes visual screenshot exfiltration is guaranteed.",
+            "3": "Accurately states that only an outbound browser request primitive has been proven, while data extraction remains conditional.",
+            "4": "Rigorously separates the primitive (browser navigation) from capabilities (visual leakage vs blind gRPC interaction) and impact (payment compromise)."
+          }
+        },
+        {
+          "dimension": "Uncertainty Recognition",
+          "description": "Identification of unknown factors that require further testing before drawing conclusions.",
+          "levels": {
+            "0": "Expresses complete certainty based on assumptions.",
+            "1": "Acknowledges that something might fail but cannot specify what.",
+            "2": "Notes that gRPC might not work with HTTP.",
+            "3": "Clearly lists unproven assumptions: protocol compatibility, JS execution flags, egress rules.",
+            "4": "Formulates an exhaustive matrix of open uncertainties with corresponding validation steps for each."
+          }
+        }
+      ],
+      "common_learner_errors": [
+        {
+          "error": "Assuming gRPC can be exploited like a standard HTTP REST API",
+          "why_it_fails": "gRPC uses HTTP/2 with binary framing (Protobuf). Sending an HTTP/1.1 GET from a browser URL bar often yields a 400 Bad Request or connection termination rather than valid RPC execution.",
+          "remedial_guidance": "Study concept.network-trust-boundaries and note how transport layer reachability differs from application layer compatibility."
+        },
+        {
+          "error": "Declaring critical impact immediately upon discovering the URL parameter",
+          "why_it_fails": "Blind SSRF in an isolated container without access to cloud metadata or with strict firewall rules may have negligible practical impact.",
+          "remedial_guidance": "Follow the capability chain: primitive -> reachability -> observable capability -> impact."
+        }
+      ]
+    }
+  ]
+}

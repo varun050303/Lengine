@@ -1,29 +1,56 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Lengine Concept",
-  "description": "An atomic reusable technical building block.",
+  "title": "Lengine Concept (v2.0)",
+  "description": "Schema for atomic technical concepts that serve as building blocks for security reasoning.",
   "type": "object",
-  "required": ["concept", "display_name", "summary", "mental_model", "mechanism", "security_relevance"],
+  "required": [
+    "schema_version",
+    "concept_id",
+    "display_name",
+    "status",
+    "summary",
+    "bounded_scope",
+    "learning_objectives",
+    "mental_model",
+    "mechanism",
+    "security_relevance",
+    "common_assumptions",
+    "sources"
+  ],
   "properties": {
-    "concept": { "type": "string", "description": "URL-safe slug identifier" },
+    "schema_version": { "type": "string", "enum": ["2.0"] },
+    "concept_id": { "type": "string", "pattern": "^concept\\.[a-z0-9-]+$" },
     "display_name": { "type": "string" },
-    "summary": { "type": "string", "description": "What the learner needs to understand about this concept for security reasoning" },
-    "mental_model": { "type": "string", "description": "One-paragraph intuitive explanation" },
-    "mechanism": { "type": "string", "description": "How the thing actually works technically" },
-    "security_relevance": {
+    "status": { "type": "string", "enum": ["draft", "in_review", "approved", "deprecated"] },
+    "summary": { "type": "string" },
+    "bounded_scope": {
+      "type": "object",
+      "required": ["covers", "delegates"],
+      "properties": {
+        "covers": { "type": "string", "description": "What bounded technical behavior this concept explains" },
+        "delegates": { "type": "string", "description": "Related concepts or mechanisms that handle adjacent concerns" }
+      }
+    },
+    "learning_objectives": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "Which topics and vulnerability classes depend on this concept"
+      "description": "Observable technical actions the learner can perform"
+    },
+    "mental_model": { "type": "string" },
+    "mechanism": { "type": "string" },
+    "security_relevance": {
+      "type": "array",
+      "items": { "type": "string" }
     },
     "common_assumptions": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["assumption", "why_it_can_fail", "security_relevance"],
+        "required": ["assumption", "why_wrong", "security_implication"],
         "properties": {
           "assumption": { "type": "string" },
-          "why_it_can_fail": { "type": "string" },
-          "security_relevance": { "type": "string" }
+          "why_wrong": { "type": "string" },
+          "security_implication": { "type": "string" }
         }
       }
     },
@@ -31,11 +58,12 @@
       "type": "array",
       "items": {
         "type": "object",
+        "required": ["id", "title", "url", "tier", "claim", "retrieved_this_pass"],
         "properties": {
           "id": { "type": "string" },
           "title": { "type": "string" },
           "url": { "type": "string" },
-          "tier": { "type": "integer" },
+          "tier": { "type": "integer", "minimum": 1, "maximum": 5 },
           "claim": { "type": "string" },
           "retrieved_this_pass": { "type": "boolean" }
         }

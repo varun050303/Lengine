@@ -1,0 +1,54 @@
+{
+  "schema_version": "2.0",
+  "topic_id": "topic.ssrf",
+  "claims": [
+    {
+      "claim_id": "claim.ssrf.authority-decomposition",
+      "statement": "RFC 3986 §3.2 defines the URI authority component as [userinfo@]host[:port], meaning that in 'user@host', 'host' is the string following the '@' delimiter, not preceding it.",
+      "type": "technical_fact",
+      "scope": "RFC 3986 compliant URI parsers",
+      "status": "supported",
+      "sources": ["S1"]
+    },
+    {
+      "claim_id": "claim.ssrf.dns-toctou",
+      "statement": "Resolving DNS during validation and resolving DNS again during HTTP socket connection creates a time-of-check-to-time-of-use (TOCTOU) vulnerability exploitable via DNS rebinding (TTL: 0s).",
+      "type": "causal_claim",
+      "scope": "Applications that validate hostnames via DNS resolution but pass the original hostname string to the HTTP client sink",
+      "status": "supported",
+      "sources": ["S4"]
+    },
+    {
+      "claim_id": "claim.ssrf.ambient-authority",
+      "statement": "Network-segmented internal microservices and cloud metadata endpoints grant ambient authorization based on source IP address rather than requiring per-request cryptographic authentication.",
+      "type": "technical_fact",
+      "scope": "Cloud instances and private VPC networks relying solely on perimeter network controls",
+      "status": "supported",
+      "sources": ["S2", "S3", "S5"]
+    },
+    {
+      "claim_id": "claim.ssrf.imdsv2-put-token",
+      "statement": "AWS IMDSv2 requires a PUT request with header 'X-aws-ec2-metadata-token-ttl-seconds' to acquire a session token, thereby neutralizing simple GET-only SSRF primitives lacking custom header control.",
+      "type": "defensive_guarantee",
+      "scope": "AWS EC2 instances with IMDSv2 configured with token hop limit = 1",
+      "status": "supported",
+      "sources": ["S5"]
+    },
+    {
+      "claim_id": "claim.ssrf.redirect-following",
+      "statement": "Server-side HTTP client libraries that follow HTTP 3xx redirects automatically will connect to the target specified in the Location header without re-applying application-layer input allowlists.",
+      "type": "causal_claim",
+      "scope": "Default configurations of standard HTTP client libraries (e.g. requests, curl, urllib)",
+      "status": "supported",
+      "sources": ["S2", "S4"]
+    },
+    {
+      "claim_id": "claim.ssrf.alternative-ip-formats",
+      "statement": "POSIX and standard socket libraries resolve alternative IP integer representations (such as dword/decimal 2130706433 or octal 017700000001) to 127.0.0.1, bypassing naive regex-based IP blocklists.",
+      "type": "implementation_variance",
+      "scope": "Standard C library resolvers (glibc, musl) and IPv4 socket implementations",
+      "status": "supported",
+      "sources": ["S2", "S4"]
+    }
+  ]
+}

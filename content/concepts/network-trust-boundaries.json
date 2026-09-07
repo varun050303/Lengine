@@ -1,8 +1,20 @@
 {
-  "concept": "network-trust-boundaries",
+  "schema_version": "2.0",
+  "concept_id": "concept.network-trust-boundaries",
   "display_name": "Network Trust Boundaries",
+  "status": "approved",
 
   "summary": "How network architecture creates implicit trust relationships — internal networks trust requests from internal IPs, cloud metadata services trust requests from instance IPs, and localhost services trust requests from the loopback interface — and why these trust relationships become exploitable when an attacker can cause a trusted component to make requests on their behalf.",
+
+  "bounded_scope": {
+    "covers": "Positional network trust, ingress/egress firewalls, private RFC 1918 subnets, loopback interface isolation, and cloud link-local metadata (169.254.169.254).",
+    "delegates": "DNS resolution of hostnames to network addresses is delegated to concept.dns-resolution."
+  },
+
+  "learning_objectives": [
+    "Differentiate ambient positional network authority (IP-based trust) from explicit cryptographic authentication.",
+    "Map trust boundary transitions in cloud and enterprise architectures (Internet -> DMZ -> VPC -> Localhost -> IMDS)."
+  ],
 
   "mental_model": "Network trust is positional: a service decides who to trust based on where the request comes from, not who initiated it. Internal services trust internal IPs. Cloud metadata trusts instance IPs. Localhost services trust the loopback interface. If an attacker can cause a server to make a request, the request arrives from the server's IP — which is trusted — regardless of who actually initiated it.",
 
@@ -18,18 +30,18 @@
   "common_assumptions": [
     {
       "assumption": "Internal services are protected because they are not reachable from the internet.",
-      "why_it_can_fail": "SSRF makes the application server act as a proxy. The request reaches the internal service from a trusted internal IP.",
-      "security_relevance": "SSRF: Internal admin panels, databases, and APIs accessible via SSRF without authentication."
+      "why_wrong": "SSRF makes the application server act as a proxy. The request reaches the internal service from a trusted internal IP.",
+      "security_implication": "SSRF: Internal admin panels, databases, and APIs accessible via SSRF without authentication."
     },
     {
       "assumption": "Cloud metadata is safe because it's only accessible from within the instance.",
-      "why_it_can_fail": "If SSRF allows the server to request http://169.254.169.254/latest/meta-data/, the metadata service returns IAM role credentials because the request comes from the instance itself.",
-      "security_relevance": "SSRF to cloud credential theft — one of the highest-impact SSRF attack paths."
+      "why_wrong": "If SSRF allows the server to request http://169.254.169.254/latest/meta-data/, the metadata service returns IAM role credentials because the request comes from the instance itself.",
+      "security_implication": "SSRF to cloud credential theft — one of the highest-impact SSRF attack paths."
     },
     {
       "assumption": "Network-level access control is sufficient for service protection.",
-      "why_it_can_fail": "Network-level controls prevent direct external access but do not prevent indirect access via a compromised or misused internal component (SSRF).",
-      "security_relevance": "Defense-in-depth: internal services should still require authentication, not rely solely on network position."
+      "why_wrong": "Network-level controls prevent direct external access but do not prevent indirect access via a compromised or misused internal component (SSRF).",
+      "security_implication": "Defense-in-depth: internal services should still require authentication, not rely solely on network position."
     }
   ],
 

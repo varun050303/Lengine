@@ -1,4 +1,6 @@
 {
+  "schema_version": "2.0",
+  "contracts_version": "2.0",
   "topics": [
     { "topic": "ssrf", "display_name": "Server-Side Request Forgery", "category": "server-side", "status": "completed", "revision_loop_count": 0, "last_updated": "2026-09-07" },
     { "topic": "sql-injection", "display_name": "SQL Injection", "category": "server-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },

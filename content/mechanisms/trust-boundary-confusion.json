@@ -1,8 +1,21 @@
 {
-  "mechanism": "trust-boundary-confusion",
+  "schema_version": "2.0",
+  "mechanism_id": "mechanism.trust-boundary-confusion",
   "display_name": "Trust-Boundary Confusion",
+  "status": "approved",
 
   "core_principle": "Attacker-controlled input causes a privileged component to act on the attacker's behalf, crossing a trust boundary that should separate the attacker from the privileged capability. The component has authority the attacker lacks — network position, file system access, credentials, or elevated permissions. The attacker does not gain the component's identity; they gain the component's capability by controlling its actions.",
+
+  "minimum_causal_signature": {
+    "components_involved": [
+      "Untrusted Caller / External Actor",
+      "Privileged Server / Dispatcher",
+      "Protected Resource / Internal Subsystem"
+    ],
+    "authority_transition": "Attacker supplies data specifying an operation or destination; the privileged component executes the operation using its own ambient authority (network position, local socket, or IAM role), granting privileged execution to untrusted intent.",
+    "security_decision_bypassed": "The protected destination relies on ambient positional trust (evaluating caller source address or caller process identity) rather than authenticating the initiator of the request.",
+    "failure_condition": "Attacker-controlled data determines the target or operation of a privileged sink without strict allowlist validation, enabling the server's ambient authority to be exerted on arbitrary targets."
+  },
 
   "conditions": [
     "A component has authority the attacker lacks (network position, credentials, file access, elevated permissions)",
@@ -10,7 +23,7 @@
     "The trust boundary between the attacker and the capability is not enforced at the input layer — the component acts on the input without verifying whether the attacker should have the resulting capability"
   ],
 
-  "members": ["ssrf", "xxe"],
+  "members": ["topic.ssrf", "topic.xxe"],
 
   "investigation_question": "Can attacker-controlled input cause a privileged component to perform an action the attacker could not perform directly? What capability does the attacker gain — and what authority makes that capability possible?",
 
@@ -23,7 +36,12 @@
     "Headless browsers (Chromium, wkhtmltopdf) rendering attacker-controlled URLs from the server's network"
   ],
 
-  "related_concepts": ["url-parsing", "dns-resolution", "http-redirects", "network-trust-boundaries"],
+  "related_concepts": [
+    "concept.url-parsing",
+    "concept.dns-resolution",
+    "concept.http-redirects",
+    "concept.network-trust-boundaries"
+  ],
 
   "sources": [
     {

@@ -1,8 +1,20 @@
 {
-  "concept": "http-redirects",
+  "schema_version": "2.0",
+  "concept_id": "concept.http-redirects",
   "display_name": "HTTP Redirects",
+  "status": "approved",
 
   "summary": "How HTTP redirect responses (3xx status codes) cause clients to issue follow-up requests to a new URL, and why redirect-following behavior introduces security-relevant state changes — particularly when validation occurs before the redirect but the action occurs after.",
+
+  "bounded_scope": {
+    "covers": "HTTP 3xx semantics, Location header processing, client redirect-following policies, and post-validation destination mutations.",
+    "delegates": "URL parsing of Location headers is delegated to concept.url-parsing; resolution of redirected hostnames is delegated to concept.dns-resolution."
+  },
+
+  "learning_objectives": [
+    "Identify how client-side redirect following introduces a gap between initial validation and final request destination.",
+    "Explain how open redirects on allowlisted domains can be chained to reach internal destinations."
+  ],
 
   "mental_model": "An HTTP redirect tells a client to make a new request to a different URL. If a server-side HTTP client follows redirects automatically, the effective destination may differ from the originally validated URL. Validation happens on the initial URL; the action (the actual connection) happens on the redirect target. This creates a TOCTOU-like gap where the redirect target can point to a restricted destination that would have been blocked by initial validation.",
 
@@ -18,18 +30,18 @@
   "common_assumptions": [
     {
       "assumption": "The URL validated is the URL that will be fetched.",
-      "why_it_can_fail": "If the HTTP client follows redirects, the effective destination is the final redirect target, not the initially validated URL.",
-      "security_relevance": "SSRF: Validate http://allowed-host.com which redirects to http://169.254.169.254/latest/meta-data/"
+      "why_wrong": "If the HTTP client follows redirects, the effective destination is the final redirect target, not the initially validated URL.",
+      "security_implication": "SSRF: Validate http://allowed-host.com which redirects to http://169.254.169.254/latest/meta-data/"
     },
     {
       "assumption": "Redirects stay within the same scheme.",
-      "why_it_can_fail": "A redirect from http:// to file:// or gopher:// is valid HTTP. Some HTTP clients follow cross-scheme redirects.",
-      "security_relevance": "SSRF: Scheme-switching redirects can access local files or interact with non-HTTP services."
+      "why_wrong": "A redirect from http:// to file:// or gopher:// is valid HTTP. Some HTTP clients follow cross-scheme redirects.",
+      "security_implication": "SSRF: Scheme-switching redirects can access local files or interact with non-HTTP services."
     },
     {
       "assumption": "The application controls the redirect destination.",
-      "why_it_can_fail": "An open redirect on an allowed domain lets the attacker control the final destination via the redirect chain.",
-      "security_relevance": "SSRF filter bypass via open redirects on allowlisted domains."
+      "why_wrong": "An open redirect on an allowed domain lets the attacker control the final destination via the redirect chain.",
+      "security_implication": "SSRF filter bypass via open redirects on allowlisted domains."
     }
   ],
 

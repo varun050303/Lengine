@@ -1,8 +1,20 @@
 {
-  "concept": "dns-resolution",
+  "schema_version": "2.0",
+  "concept_id": "concept.dns-resolution",
   "display_name": "DNS Resolution",
+  "status": "approved",
 
   "summary": "How hostnames are resolved to IP addresses, and why the resolution process introduces security-relevant non-determinism — particularly the assumption that a hostname maps stably to the same IP address.",
+
+  "bounded_scope": {
+    "covers": "DNS hierarchical resolution, TTL expiration, caching behavior, and temporal instability between multiple resolution calls (TOCTOU).",
+    "delegates": "Network routing and IP reachability are delegated to concept.network-trust-boundaries; URI decomposition is delegated to concept.url-parsing."
+  },
+
+  "learning_objectives": [
+    "Explain how time-to-live (TTL) expiry permits non-deterministic resolution between validation and connection phases.",
+    "Derive why hostname allowlists fail to guarantee IP address safety without resolved IP pinning."
+  ],
 
   "mental_model": "DNS resolution translates a hostname into an IP address. This translation is not guaranteed to be stable: the same hostname can resolve to different IPs over time (TTL expiry, round-robin, geographic routing). When a system validates a hostname at one point in time and connects at another, the two resolutions may return different addresses. This gap is the foundation of DNS rebinding attacks.",
 
@@ -18,18 +30,18 @@
   "common_assumptions": [
     {
       "assumption": "DNS resolution is stable — the same hostname always resolves to the same IP.",
-      "why_it_can_fail": "TTL expiry, DNS rebinding attacks, round-robin DNS, and geographic routing all cause resolution to change between lookups.",
-      "security_relevance": "SSRF: A validate-then-connect pattern may validate against a public IP but connect to a private IP if DNS changes between the two lookups."
+      "why_wrong": "TTL expiry, DNS rebinding attacks, round-robin DNS, and geographic routing all cause resolution to change between lookups.",
+      "security_implication": "SSRF: A validate-then-connect pattern may validate against a public IP but connect to a private IP if DNS changes between the two lookups."
     },
     {
       "assumption": "Validating the hostname is equivalent to validating the destination IP.",
-      "why_it_can_fail": "A hostname can resolve to any IP, including private/internal addresses. Hostname validation (e.g., checking against a domain allowlist) does not constrain the resolved IP.",
-      "security_relevance": "SSRF: An attacker-controlled hostname on an allowed domain can resolve to 127.0.0.1 or internal IPs."
+      "why_wrong": "A hostname can resolve to any IP, including private/internal addresses. Hostname validation (e.g., checking against a domain allowlist) does not constrain the resolved IP.",
+      "security_implication": "SSRF: An attacker-controlled hostname on an allowed domain can resolve to 127.0.0.1 or internal IPs."
     },
     {
       "assumption": "DNS resolution happens once per request.",
-      "why_it_can_fail": "Some HTTP clients re-resolve DNS on redirect. A URL may initially resolve to a public IP, then after a redirect, the re-resolution may return a private IP.",
-      "security_relevance": "SSRF bypass via redirect chains that trigger re-resolution."
+      "why_wrong": "Some HTTP clients re-resolve DNS on redirect. A URL may initially resolve to a public IP, then after a redirect, the re-resolution may return a private IP.",
+      "security_implication": "SSRF bypass via redirect chains that trigger re-resolution."
     }
   ],
 
