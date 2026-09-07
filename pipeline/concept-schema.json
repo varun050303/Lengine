@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lengine Concept",
+  "description": "An atomic reusable technical building block.",
+  "type": "object",
+  "required": ["concept", "display_name", "summary", "mental_model", "mechanism", "security_relevance"],
+  "properties": {
+    "concept": { "type": "string", "description": "URL-safe slug identifier" },
+    "display_name": { "type": "string" },
+    "summary": { "type": "string", "description": "What the learner needs to understand about this concept for security reasoning" },
+    "mental_model": { "type": "string", "description": "One-paragraph intuitive explanation" },
+    "mechanism": { "type": "string", "description": "How the thing actually works technically" },
+    "security_relevance": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Which topics and vulnerability classes depend on this concept"
+    },
+    "common_assumptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["assumption", "why_it_can_fail", "security_relevance"],
+        "properties": {
+          "assumption": { "type": "string" },
+          "why_it_can_fail": { "type": "string" },
+          "security_relevance": { "type": "string" }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string" },
+          "tier": { "type": "integer" },
+          "claim": { "type": "string" },
+          "retrieved_this_pass": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

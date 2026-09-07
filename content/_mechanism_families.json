@@ -1,0 +1,95 @@
+{
+  "families": [
+    {
+      "id": "interpretation-boundary",
+      "display_name": "Interpretation Boundary",
+      "core_principle": "Attacker-controlled DATA becomes CONTROL when a parser with a richer grammar interprets it. The security failure occurs because the data crosses an interpretation boundary where its meaning changes from inert content to executable structure.",
+      "conditions": [
+        "Attacker controls input that reaches a parser/interpreter",
+        "The parser has a grammar richer than the data was intended to carry",
+        "No boundary enforcement prevents the data from acquiring structural meaning"
+      ],
+      "members": ["sql-injection", "xss", "command-injection", "ssti", "xxe", "nosql-injection"],
+      "investigation_question": "Does attacker-controlled input reach a parser that could interpret it as structure rather than content?",
+      "defensive_implication": "Ensure that attacker-controlled data cannot acquire structural meaning in the target grammar — through parameterization, escaping appropriate to the target context, or sandboxed interpretation."
+    },
+    {
+      "id": "parser-disagreement",
+      "display_name": "Parser Disagreement",
+      "core_principle": "Two components interpret the same attacker-controlled representation differently. A security decision made using one interpretation does not constrain the operation performed using the other.",
+      "conditions": [
+        "Two or more components process the same input",
+        "The components use different parsing rules or specifications",
+        "A security-relevant decision is made by one component but the action is performed by another"
+      ],
+      "members": ["request-smuggling", "web-cache-poisoning", "web-cache-deception", "host-header-attacks"],
+      "investigation_question": "Do two components in the request path interpret the same bytes differently, and does a security decision depend on one interpretation while the action uses the other?",
+      "defensive_implication": "Normalize the representation before making security decisions, or ensure all components in the chain agree on parsing rules."
+    },
+    {
+      "id": "trust-boundary-confusion",
+      "display_name": "Trust-Boundary Confusion",
+      "core_principle": "Attacker-controlled input causes a privileged component to act on the attacker's behalf, crossing a trust boundary that should separate the attacker from the privileged capability.",
+      "conditions": [
+        "A component has authority the attacker lacks (network position, credentials, file access)",
+        "Attacker-controlled input influences what the privileged component does",
+        "The trust boundary between the attacker and the capability is not enforced at the input layer"
+      ],
+      "members": ["ssrf", "xxe"],
+      "investigation_question": "Can attacker-controlled input cause a privileged component to perform an action the attacker could not perform directly?",
+      "defensive_implication": "Validate attacker-controlled input against a strict allowlist before passing it to any privileged component. Apply defense-in-depth at the infrastructure layer."
+    },
+    {
+      "id": "authorization-confusion",
+      "display_name": "Authorization Confusion",
+      "core_principle": "A security decision uses attacker-influenced identity, object reference, or context, allowing the attacker to access or modify resources they should not reach.",
+      "conditions": [
+        "The application makes an authorization decision",
+        "The decision depends on attacker-controllable data (object ID, role, session, token)",
+        "The application does not independently verify the relationship between the authenticated identity and the requested resource"
+      ],
+      "members": ["access-control", "business-logic", "oauth"],
+      "investigation_question": "Does the application verify that the authenticated user is authorized for the specific resource, or does it trust an attacker-controllable reference?",
+      "defensive_implication": "Authorization decisions must use server-side session state and independently verify the relationship between the authenticated identity and the requested resource."
+    },
+    {
+      "id": "state-race-confusion",
+      "display_name": "State / Race Confusion",
+      "core_principle": "A security decision depends on state that can change between the check and the use, or the application assumes sequential processing where concurrent processing is possible.",
+      "conditions": [
+        "A security-relevant check and a subsequent action are not atomic",
+        "An attacker can influence the state between the check and the action",
+        "The race window is reachable in practice"
+      ],
+      "members": ["race-conditions", "business-logic"],
+      "investigation_question": "Is there a time-of-check-to-time-of-use gap where an attacker can change the state that a security decision depends on?",
+      "defensive_implication": "Make security checks and their dependent actions atomic. Use database-level locking, compare-and-swap operations, or serialized processing where race conditions could affect security properties."
+    },
+    {
+      "id": "serialization-boundary",
+      "display_name": "Serialization Boundary",
+      "core_principle": "Data crosses a serialization/deserialization boundary and acquires unexpected authority — either through object reconstruction, prototype manipulation, or type confusion.",
+      "conditions": [
+        "Attacker controls serialized data",
+        "The deserialization process can reconstruct objects with side effects or authority",
+        "The application does not restrict what types can be deserialized"
+      ],
+      "members": ["insecure-deserialization", "prototype-pollution", "jwt"],
+      "investigation_question": "Does attacker-controlled data pass through a deserialization process that could reconstruct objects with authority or side effects?",
+      "defensive_implication": "Never deserialize untrusted data using a general-purpose deserializer. Use allowlists for permitted types. Prefer data-only formats (JSON) over object-graph formats (Java serialization, pickle)."
+    },
+    {
+      "id": "origin-context-confusion",
+      "display_name": "Origin / Context Confusion",
+      "core_principle": "A browser or client-side component makes a trust decision based on context (origin, referrer, framing, DOM state) that the attacker can manipulate.",
+      "conditions": [
+        "A security decision depends on the request's origin, context, or framing",
+        "The attacker can manipulate the context (e.g., by hosting a malicious page that makes cross-origin requests or frames the target)",
+        "The application does not independently verify the action's legitimacy"
+      ],
+      "members": ["csrf", "cors", "clickjacking", "dom-based", "websockets"],
+      "investigation_question": "Can an attacker manipulate the context in which the user's browser interacts with the application, causing the browser to perform actions or leak data the user did not intend?",
+      "defensive_implication": "Use anti-CSRF tokens, strict CORS policies, X-Frame-Options/CSP frame-ancestors, and avoid trusting client-side DOM state for security decisions."
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "crosslinks": [
+    { "from": "ssrf", "to": "xxe", "relationship": "shared_mechanism", "reason": "XXE external entities can trigger server-side requests — SSRF via XML parser input vector" },
+    { "from": "ssrf", "to": "oauth", "relationship": "shared_concept", "reason": "redirect_uri manipulation exploits URL validation gaps similar to SSRF URL validation bypasses" },
+    { "from": "xss", "to": "dom-based", "relationship": "shared_mechanism", "reason": "DOM-based XSS is XSS where the interpretation boundary is crossed entirely client-side via JavaScript sinks" },
+    { "from": "xss", "to": "csrf", "relationship": "enables", "reason": "XSS can bypass CSRF protections by reading anti-CSRF tokens from the same origin" },
+    { "from": "request-smuggling", "to": "web-cache-poisoning", "relationship": "shared_mechanism", "reason": "Both depend on parser disagreement between components in the request path" },
+    { "from": "request-smuggling", "to": "web-cache-deception", "relationship": "shared_mechanism", "reason": "Cache deception exploits path-interpretation disagreement between cache and origin" },
+    { "from": "csrf", "to": "cors", "relationship": "complementary", "reason": "CORS misconfigurations can enable cross-origin data theft; CSRF enables cross-origin state changes" },
+    { "from": "csrf", "to": "clickjacking", "relationship": "shared_mechanism", "reason": "Both exploit the user's authenticated session via attacker-controlled context" },
+    { "from": "sql-injection", "to": "nosql-injection", "relationship": "shared_mechanism", "reason": "Both cross the same interpretation boundary — attacker data becomes query structure" },
+    { "from": "sql-injection", "to": "command-injection", "relationship": "shared_mechanism", "reason": "Both are interpretation-boundary vulnerabilities where data becomes executable syntax" },
+    { "from": "ssti", "to": "xss", "relationship": "shared_mechanism", "reason": "Both involve attacker data crossing an interpretation boundary into an execution context — server-side vs client-side" },
+    { "from": "insecure-deserialization", "to": "prototype-pollution", "relationship": "shared_mechanism", "reason": "Both involve attacker-controlled data acquiring structural authority through a deserialization or object-manipulation process" },
+    { "from": "jwt", "to": "authentication", "relationship": "shared_concept", "reason": "JWT vulnerabilities are a specific class of authentication mechanism failures" },
+    { "from": "oauth", "to": "authentication", "relationship": "shared_concept", "reason": "OAuth authorization flow vulnerabilities often manifest as authentication bypasses" },
+    { "from": "access-control", "to": "business-logic", "relationship": "shared_mechanism", "reason": "Both involve authorization confusion — security decisions using attacker-influenced context" },
+    { "from": "path-traversal", "to": "file-upload", "relationship": "enables", "reason": "Path traversal during file upload can place files in unintended locations" },
+    { "from": "host-header-attacks", "to": "web-cache-poisoning", "relationship": "enables", "reason": "Host header manipulation can poison caches when the host header influences cached response content" }
+  ]
+}

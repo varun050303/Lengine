@@ -1,0 +1,329 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lengine Topic",
+  "description": "A vulnerability-specific reasoning model following the Lengine knowledge system.",
+  "type": "object",
+  "required": [
+    "topic",
+    "display_name",
+    "prerequisites",
+    "mechanism_family",
+    "mental_model",
+    "invariant",
+    "normal_behavior",
+    "vulnerable_behavior",
+    "causal_mechanism",
+    "exploitability",
+    "investigation",
+    "confirmation",
+    "capability_and_impact",
+    "traps",
+    "transfer",
+    "sources"
+  ],
+  "properties": {
+    "topic": { "type": "string", "description": "URL-safe slug identifier" },
+    "display_name": { "type": "string" },
+    "category": { "type": "string", "enum": ["server-side", "client-side", "advanced"] },
+    "prerequisites": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs of concept files this topic depends on"
+    },
+    "mechanism_family": {
+      "type": "string",
+      "description": "ID of the mechanism family this topic belongs to"
+    },
+
+    "mental_model": {
+      "type": "object",
+      "required": ["one_sentence", "short_explanation", "diagram"],
+      "properties": {
+        "one_sentence": { "type": "string", "description": "Core mechanism in one sentence" },
+        "short_explanation": { "type": "string", "description": "3-5 sentence explanation" },
+        "diagram": { "type": "string", "description": "ASCII/text diagram of the core mechanism" },
+        "analogy": {
+          "type": "object",
+          "properties": {
+            "text": { "type": "string" },
+            "where_it_breaks": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "invariant": {
+      "type": "object",
+      "required": ["statement", "why_it_matters", "violation_condition", "investigation_question"],
+      "properties": {
+        "statement": { "type": "string", "description": "The security property that must hold" },
+        "why_it_matters": { "type": "string" },
+        "violation_condition": { "type": "string", "description": "What makes the invariant false" },
+        "investigation_question": { "type": "string", "description": "The question a pentester should ask" }
+      }
+    },
+
+    "normal_behavior": {
+      "type": "object",
+      "required": ["description"],
+      "properties": {
+        "description": { "type": "string" },
+        "diagram": { "type": "string" }
+      }
+    },
+
+    "vulnerable_behavior": {
+      "type": "object",
+      "required": ["description"],
+      "properties": {
+        "description": { "type": "string" },
+        "diagram": { "type": "string" }
+      }
+    },
+
+    "causal_mechanism": {
+      "type": "object",
+      "required": ["steps"],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Ordered causal chain: what happens step by step"
+        },
+        "data_flow": {
+          "type": "object",
+          "properties": {
+            "source": { "type": "string" },
+            "transformations": { "type": "array", "items": { "type": "string" } },
+            "parser_or_component": { "type": "string" },
+            "sink_or_decision": { "type": "string" },
+            "result": { "type": "string" }
+          }
+        },
+        "trust_transformation": {
+          "type": "object",
+          "description": "How attacker data changes meaning through interpretation",
+          "properties": {
+            "attacker_data": { "type": "string" },
+            "parser_or_interpreter": { "type": "string" },
+            "new_meaning": { "type": "string" },
+            "authority_gained": { "type": "string" },
+            "effect": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "exploitability": {
+      "type": "object",
+      "required": ["conditions"],
+      "properties": {
+        "conditions": {
+          "description": "Boolean logic gate — supports AND/OR nesting",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": ["condition"],
+                    "properties": {
+                      "condition": { "type": "string" },
+                      "how_to_test": { "type": "string" }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": ["operator", "conditions"],
+                    "properties": {
+                      "operator": { "type": "string", "enum": ["AND", "OR"] },
+                      "label": { "type": "string" },
+                      "conditions": { "type": "array" }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "gate_rule": { "type": "string" }
+      }
+    },
+
+    "investigation": {
+      "type": "object",
+      "required": ["attack_surface", "hypotheses", "minimal_experiments"],
+      "properties": {
+        "attack_surface": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Where to look for this vulnerability class"
+        },
+        "hypotheses": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "hypothesis", "predicted_observation"],
+            "properties": {
+              "id": { "type": "string" },
+              "hypothesis": { "type": "string" },
+              "predicted_observation": { "type": "string" }
+            }
+          }
+        },
+        "minimal_experiments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["hypothesis", "experiment"],
+            "properties": {
+              "hypothesis": { "type": "string" },
+              "experiment": { "type": "string" },
+              "observation_if_true": { "type": "string" },
+              "observation_if_false": { "type": "string" },
+              "information_gain": { "type": "string" },
+              "next_experiment": { "type": "string" }
+            }
+          }
+        },
+        "decision_points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "yes": { "type": "string" },
+              "no": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "confirmation": {
+      "type": "object",
+      "required": ["what_must_be_proven", "evidence", "safe_confirmation"],
+      "properties": {
+        "what_must_be_proven": { "type": "array", "items": { "type": "string" } },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "strength": { "type": "string", "enum": ["strong", "moderate", "weak", "insufficient"] },
+              "evidence": { "type": "string" }
+            }
+          }
+        },
+        "safe_confirmation": { "type": "string" }
+      }
+    },
+
+    "capability_and_impact": {
+      "type": "object",
+      "required": ["primitive", "capabilities"],
+      "properties": {
+        "primitive": { "type": "string", "description": "The basic capability gained" },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "capability": { "type": "string" },
+              "additional_prerequisite": { "type": ["string", "null"] },
+              "impact": { "type": "string" }
+            }
+          }
+        },
+        "impact_conditions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "What determines actual severity"
+        }
+      }
+    },
+
+    "traps": {
+      "type": "object",
+      "properties": {
+        "common_misconceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "misconception": { "type": "string" },
+              "why_wrong": { "type": "string" },
+              "correct_model": { "type": "string" }
+            }
+          }
+        },
+        "false_positives": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "observation": { "type": "string" },
+              "incorrect_conclusion": { "type": "string" },
+              "why_incorrect": { "type": "string" },
+              "what_to_verify_next": { "type": "string" }
+            }
+          }
+        },
+        "failed_attempts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "attempt": { "type": "string" },
+              "result": { "type": "string" },
+              "why": { "type": "string" },
+              "lesson": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+
+    "transfer": {
+      "type": "object",
+      "required": ["shared_mechanism", "related_topics", "new_contexts"],
+      "properties": {
+        "shared_mechanism": { "type": "string", "description": "The transferable principle" },
+        "related_topics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "topic": { "type": "string" },
+              "shared_principle": { "type": "string" }
+            }
+          }
+        },
+        "new_contexts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Where else this mechanism could appear"
+        }
+      }
+    },
+
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "url", "tier", "claim", "retrieved_this_pass"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string", "format": "uri" },
+          "tier": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "claim": { "type": "string", "description": "What specific claim this source supports" },
+          "retrieved_this_pass": { "type": "boolean" }
+        }
+      }
+    }
+  },
+
+  "additionalProperties": true
+}

@@ -1,0 +1,46 @@
+{
+  "concept": "dns-resolution",
+  "display_name": "DNS Resolution",
+
+  "summary": "How hostnames are resolved to IP addresses, and why the resolution process introduces security-relevant non-determinism — particularly the assumption that a hostname maps stably to the same IP address.",
+
+  "mental_model": "DNS resolution translates a hostname into an IP address. This translation is not guaranteed to be stable: the same hostname can resolve to different IPs over time (TTL expiry, round-robin, geographic routing). When a system validates a hostname at one point in time and connects at another, the two resolutions may return different addresses. This gap is the foundation of DNS rebinding attacks.",
+
+  "mechanism": "When an application resolves a hostname, it queries DNS recursively: local cache → system resolver → recursive resolver → authoritative nameserver. The response includes one or more IP addresses and a TTL (time-to-live) value. After TTL expiry, the next resolution may return a different IP. An attacker controlling a DNS zone can configure extremely short TTLs (e.g., 0 seconds) so that the first resolution returns an innocuous public IP (passing validation) and the second resolution returns a private IP (reaching the internal network). This is DNS rebinding.",
+
+  "security_relevance": [
+    "SSRF — DNS rebinding bypasses hostname-based validation by changing resolution between check and connect",
+    "SSRF — Time-of-check-to-time-of-use (TOCTOU) between DNS validation and HTTP connection",
+    "Cache poisoning — DNS cache can be poisoned to redirect resolution",
+    "Subdomain takeover — dangling DNS records pointing to unclaimed resources"
+  ],
+
+  "common_assumptions": [
+    {
+      "assumption": "DNS resolution is stable — the same hostname always resolves to the same IP.",
+      "why_it_can_fail": "TTL expiry, DNS rebinding attacks, round-robin DNS, and geographic routing all cause resolution to change between lookups.",
+      "security_relevance": "SSRF: A validate-then-connect pattern may validate against a public IP but connect to a private IP if DNS changes between the two lookups."
+    },
+    {
+      "assumption": "Validating the hostname is equivalent to validating the destination IP.",
+      "why_it_can_fail": "A hostname can resolve to any IP, including private/internal addresses. Hostname validation (e.g., checking against a domain allowlist) does not constrain the resolved IP.",
+      "security_relevance": "SSRF: An attacker-controlled hostname on an allowed domain can resolve to 127.0.0.1 or internal IPs."
+    },
+    {
+      "assumption": "DNS resolution happens once per request.",
+      "why_it_can_fail": "Some HTTP clients re-resolve DNS on redirect. A URL may initially resolve to a public IP, then after a redirect, the re-resolution may return a private IP.",
+      "security_relevance": "SSRF bypass via redirect chains that trigger re-resolution."
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "OWASP - Server Side Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "tier": 2,
+      "claim": "Documents DNS rebinding as a SSRF defense bypass technique and recommends resolving DNS once, validating the IP, then connecting to the resolved IP",
+      "retrieved_this_pass": true
+    }
+  ]
+}

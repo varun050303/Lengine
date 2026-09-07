@@ -1,0 +1,50 @@
+===============================================================================
+DIAGRAM 5: BREAKING THE ATTACK CHAIN (DEFENSE-IN-DEPTH)
+===============================================================================
+
+                                    ATTACK CHAIN
+                                         │
+ [ Attacker Input: "http://target" ]     │
+                 │                       │
+                 ▼                       │
+   ┌───────────────────────────┐         │
+───┤ 1. INPUT VALIDATION LAYER ├─────────┴────────────────────────────────────
+   │ Strict Allowlist:         │ [FAIL] -> Reject request immediately.
+   │ - Scheme must be HTTPS    │           Bypasses: Blocklists fail against IP
+   │ - Domain in known allowlist│          formats (0x7f000001, ::1) or @ tricks.
+   └─────────────┬─────────────┘
+                 │ [PASS]
+                 ▼
+   ┌───────────────────────────┐
+───┤ 2. RESOLUTION & PINNING   ├──────────────────────────────────────────────
+   │ DNS Resolution & Check:   │ [FAIL] -> Abort if IP is in private/loopback/
+   │ - Resolve hostname once   │           link-local (RFC 1918, RFC 3927).
+   │ - PIN socket to target IP │           Connect ONLY to validated IP.
+   │                           │           Defeats: DNS Rebinding (TOCTOU).
+   └─────────────┬─────────────┘
+                 │ [PASS]
+                 ▼
+   ┌───────────────────────────┐
+───┤ 3. HTTP CLIENT CONTROLS   ├──────────────────────────────────────────────
+   │ Client Configuration:     │ [FAIL] -> Disable redirect following or
+   │ - Follow-redirects = false│           re-run full validation on 3xx Target.
+   │ - Restrict allowed ports  │           Defeats: Open redirect chaining.
+   └─────────────┬─────────────┘
+                 │ [PASS]
+                 ▼
+   ┌───────────────────────────┐
+───┤ 4. NETWORK EGRESS CONTROLS├──────────────────────────────────────────────
+   │ Firewall / Security Group:│ [FAIL] -> Kernel drops packets to internal subnets,
+   │ - Drop egress to 10.0.0.0 │           loopback, or 169.254.169.254.
+   │ - Dedicated DMZ proxy     │           Defeats: Application layer bypasses.
+   └─────────────┬─────────────┘
+                 │ [PASS]
+                 ▼
+   ┌───────────────────────────┐
+───┤ 5. ENDPOINT HARDENING     ├──────────────────────────────────────────────
+   │ Destination Auth:         │ [FAIL] -> Reject request lacking auth header.
+   │ - Enforce AWS IMDSv2      │           IMDSv2 requires PUT with custom token;
+   │ - Zero ambient IP trust   │           simple SSRF GETs fail.
+   │ - Internal mutual TLS     │           Defeats: Unauthorized access even if reached.
+   └───────────────────────────┘
+===============================================================================

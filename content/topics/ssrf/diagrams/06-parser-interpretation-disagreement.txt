@@ -1,0 +1,51 @@
+===============================================================================
+DIAGRAM 6: PARSER INTERPRETATION DISAGREEMENT & TOCTOU
+===============================================================================
+
+SCENARIO A: RFC 3986 §3.2 AUTHORITY DISAGREEMENT (USERINFO VS HOST)
+
+Input: "http://allowed-domain.com@127.0.0.1:80/admin"
+
+  FLAWED VALIDATOR / NAIVE REGEX          RFC 3986 COMPLIANT HTTP CLIENT
+  (e.g., ^http[s]?://allowed-domain\.com) (Sink: curl, requests, urllib)
+  ┌──────────────────────────────────┐    ┌──────────────────────────────────┐
+  │ Matches prefix:                  │    │ Authority decomposition (§3.2):  │
+  │ "allowed-domain.com"             │    │ userinfo = "allowed-domain.com"  │
+  │                                  │    │ delimiter = "@"                  │
+  │ Decision:                        │    │ host     = "127.0.0.1"           │
+  │ Matches allowlist -> PERMITTED   │    │ port     = "80"                  │
+  └────────────────┬─────────────────┘    │                                  │
+                   │                      │ Decision:                        │
+                   │                      │ Connect to host: 127.0.0.1:80    │
+                   │                      └────────────────┬─────────────────┘
+                   ▼                                       ▼
+             ALLOWLIST PASSED                      CONNECTS TO LOCALHOST
+
+
+-------------------------------------------------------------------------------
+
+SCENARIO B: TIME-OF-CHECK / TIME-OF-USE (DNS REBINDING)
+
+Host controlled by attacker: "rebind.attacker.com" (TTL: 0 seconds)
+
+  TIME T0: VALIDATION CHECK                TIME T1: CONNECTION SINK
+  ┌──────────────────────────────────┐    ┌──────────────────────────────────┐
+  │ Application resolves hostname:   │    │ HTTP Client connects to hostname:│
+  │ gethostbyname("rebind...")       │    │ gethostbyname("rebind...")       │
+  │                                  │    │                                  │
+  │ Attacker DNS returns:            │    │ Attacker DNS returns (new TTL):  │
+  │ IP: 93.184.216.34 (Public IP)    │    │ IP: 169.254.169.254 (IMDS IP)    │
+  │                                  │    │                                  │
+  │ Validation Logic:                │    │ Client Socket:                   │
+  │ Is 93.184.216.34 private? NO.    │    │ connect(socket, 169.254.169.254) │
+  │ Status: ALLOWED                  │    │ Status: CONNECTED                │
+  └────────────────┬─────────────────┘    └────────────────┬─────────────────┘
+                   │                                       │
+                   ▼                                       ▼
+             IP IS PUBLIC                         REQUEST REACHES IMDS
+
+ROOT CAUSE:
+The validator and the sink do not share the same interpretation of the input!
+In Scenario A: Disagreement on URI syntax decomposition.
+In Scenario B: Disagreement on the temporal resolution of the hostname.
+===============================================================================

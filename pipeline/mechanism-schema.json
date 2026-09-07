@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lengine Mechanism Family",
+  "description": "A reusable causal pattern that connects multiple vulnerability classes.",
+  "type": "object",
+  "required": ["mechanism", "display_name", "core_principle", "conditions", "members", "investigation_question", "defensive_implication"],
+  "properties": {
+    "mechanism": { "type": "string", "description": "URL-safe slug identifier" },
+    "display_name": { "type": "string" },
+    "core_principle": { "type": "string", "description": "The reusable causal explanation" },
+    "conditions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What must be true for this mechanism to apply"
+    },
+    "members": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Topic IDs that belong to this family"
+    },
+    "investigation_question": { "type": "string", "description": "The question that identifies whether this mechanism might apply" },
+    "defensive_implication": { "type": "string", "description": "How to prevent this class of mechanism" },
+    "common_manifestations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Common ways this mechanism appears in practice"
+    },
+    "related_concepts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Concept IDs relevant to understanding this mechanism"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string" },
+          "tier": { "type": "integer" },
+          "claim": { "type": "string" },
+          "retrieved_this_pass": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

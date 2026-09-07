@@ -1,0 +1,56 @@
+{
+  "concept": "url-parsing",
+  "display_name": "URL Parsing",
+
+  "summary": "How URLs are decomposed into components (scheme, authority, host, port, path, query, fragment) and why different parsers may disagree on which component contains which bytes.",
+
+  "mental_model": "A URL is a structured string. A parser decomposes it into components: scheme://userinfo@host:port/path?query#fragment. Security problems arise when two systems parse the same URL string and disagree about which part is the host, which part is the path, or which part is the userinfo — because a security decision made by one parser's interpretation does not constrain the action performed using the other's.",
+
+  "mechanism": "RFC 3986 defines the generic URI syntax as scheme://authority/path?query#fragment, where the authority component is further decomposed into userinfo@host:port. The '@' character separates optional userinfo from the host. The '#' character separates the fragment. The '/' separates path segments. However, many real-world applications implement ad-hoc URL parsing (string matching, regex extraction, or library-specific parsers) that may disagree with the RFC grammar. Common disagreements include: (1) which part of the URL is the host when '@' is present (the host is AFTER the last '@'), (2) whether '#' terminates the authority or is part of the path, (3) how percent-encoding is handled before vs. after parsing, (4) whether backslashes are treated as path separators, (5) how IP addresses in alternative formats (decimal, hex, octal, IPv6) are resolved.",
+
+  "security_relevance": [
+    "SSRF — URL parsing disagreements between validator and HTTP client can bypass destination restrictions",
+    "Open redirect — parser disagreements about the host component can redirect to attacker-controlled domains",
+    "OAuth — redirect_uri validation can be bypassed via URL parsing inconsistencies",
+    "Path traversal — path normalization differences (dot-segments, encoding) can escape intended directories",
+    "Request smuggling — URL parsing differences between proxy and backend",
+    "Web cache poisoning — URL normalization differences between cache and origin"
+  ],
+
+  "common_assumptions": [
+    {
+      "assumption": "Two URL parsers will extract the same host from the same URL string.",
+      "why_it_can_fail": "Different parsers handle the userinfo '@' separator, fragment '#' delimiter, and percent-encoding at different stages. A validator may see 'expected-host' while the HTTP client connects to 'evil-host' from the same URL.",
+      "security_relevance": "SSRF allowlist bypass: URL validator and HTTP client disagree about the destination host."
+    },
+    {
+      "assumption": "Percent-encoding is decoded consistently across components.",
+      "why_it_can_fail": "Some parsers decode before splitting components; others split first, then decode. Double-encoding exploits parsers that decode recursively.",
+      "security_relevance": "Path traversal and SSRF filter bypasses using encoded delimiters (%2f for '/', %40 for '@', %23 for '#')."
+    },
+    {
+      "assumption": "An IP address in a URL unambiguously identifies a network host.",
+      "why_it_can_fail": "IP addresses can be represented in decimal (2130706433), octal (017700000001), hex (0x7f000001), IPv6 (::1), or mixed formats. A blocklist checking for '127.0.0.1' will miss equivalent representations.",
+      "security_relevance": "SSRF blocklist bypass via alternative IP representations."
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "RFC 3986 - Uniform Resource Identifier (URI): Generic Syntax",
+      "url": "https://www.rfc-editor.org/rfc/rfc3986",
+      "tier": 1,
+      "claim": "Defines the generic URI syntax including authority decomposition (userinfo@host:port), percent-encoding rules, and component delimiters",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "PortSwigger - SSRF with whitelist-based input filters",
+      "url": "https://portswigger.net/web-security/ssrf",
+      "tier": 2,
+      "claim": "Documents URL parsing inconsistencies exploitable for SSRF filter bypass: '@' for userinfo, '#' for fragment, DNS hierarchy abuse, and double-encoding",
+      "retrieved_this_pass": true
+    }
+  ]
+}

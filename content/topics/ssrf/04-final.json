@@ -1,0 +1,366 @@
+{
+  "topic": "ssrf",
+  "display_name": "Server-Side Request Forgery (SSRF)",
+  "category": "server-side",
+
+  "prerequisites": ["url-parsing", "dns-resolution", "http-redirects", "network-trust-boundaries"],
+  "mechanism_family": "trust-boundary-confusion",
+
+  "mental_model": {
+    "one_sentence": "SSRF occurs when an application that makes server-side network requests allows an attacker to influence the request destination, causing the server to use its privileged network position on the attacker's behalf.",
+    "short_explanation": "An application accepts input that determines where it sends a server-side network request. The server has a privileged network position — it can reach internal services, cloud metadata endpoints, and localhost services that external attackers cannot. When the attacker controls the destination, the server becomes an unwitting proxy: the request arrives at the target from a trusted internal IP, regardless of who initiated it. The attacker gains the server's network authority without gaining the server's identity.",
+    "diagram": "Attacker\n   │\n   │ controls destination\n   ▼\nApplication\n   │\n   │ makes request from trusted position\n   ▼\nServer-side HTTP client\n   │\n   ▼\nDestination attacker cannot reach directly\n   │\n   ▼\nInternal service / cloud metadata / localhost",
+    "analogy": {
+      "text": "You give a delivery address to an employee who has badge access to restricted buildings. The employee delivers your package to the address you specified — inside a building you cannot enter. The building's security checks the employee's badge, not your identity.",
+      "where_it_breaks": "Real SSRF involves URL parsing, DNS resolution, HTTP redirect following, multiple protocol support, response handling, and the distinction between full-response and blind variants. The 'employee' may also follow redirect signs that change the effective destination after initial validation."
+    }
+  },
+
+  "invariant": {
+    "statement": "Attacker-controlled input must not give an external actor unauthorized use of the server's network position.",
+    "why_it_matters": "The server's network position is privileged — it includes access to internal networks, cloud metadata endpoints (169.254.169.254), localhost services, and systems protected by network-layer access controls. Unauthorized use of this position allows reading internal data, stealing cloud credentials, interacting with internal services, and bypassing network segmentation.",
+    "violation_condition": "Attacker-controlled input determines the destination of a server-side request without adequate validation, and the server makes the request using its privileged network position.",
+    "investigation_question": "Can an external actor cause the server to make a network request to a destination the actor specifies, and does that destination include addresses the actor could not reach directly?"
+  },
+
+  "normal_behavior": {
+    "description": "The application fetches data from a predetermined, trusted backend URL. User input may influence query parameters or path segments, but the destination host is hardcoded or selected from a strict allowlist. The server's network position is not exposed to attacker control.",
+    "diagram": "User request → Application → Hardcoded backend URL → Trusted internal service → Response processed"
+  },
+
+  "vulnerable_behavior": {
+    "description": "The application accepts a user-supplied URL and passes it to a server-side HTTP client. The user controls the destination host. The server makes the request from its internal network position, crossing the trust boundary.",
+    "diagram": "Attacker-supplied URL → Application → Server HTTP client → Attacker's destination\n                                                                    ↓\n                                                        Internal service responds\n                                                        to trusted internal IP"
+  },
+
+  "causal_mechanism": {
+    "steps": [
+      "1. Attacker supplies a value (URL, hostname, IP) through an application input that influences a server-side request destination.",
+      "2. The application receives this value. It may validate, transform, or pass it through unchanged.",
+      "3. The value reaches a server-side HTTP client — the sink.",
+      "4. The HTTP client parses the URL (per RFC 3986 §3.2 for authority decomposition), resolves DNS, and initiates a connection.",
+      "5. The connection originates from the server's network interface. The destination sees a request from a trusted internal IP.",
+      "6. If the destination is an internal service, cloud metadata endpoint, or localhost service, it responds as if the request came from a legitimate internal component.",
+      "7. The attacker observes the result — response content (full SSRF), timing/error differences, or out-of-band callback (blind SSRF)."
+    ],
+    "data_flow": {
+      "source": "User-controlled parameter (url, stockApi, webhook, callback, imageUrl, etc.)",
+      "transformations": ["URL validation (if any)", "URL parsing (RFC 3986 §3.2 authority, §2.1 percent-encoding)", "DNS resolution", "HTTP redirect following"],
+      "parser_or_component": "Server-side HTTP client (urllib, requests, HttpClient, curl, server-side fetch)",
+      "sink_or_decision": "Outbound network connection from server's interface",
+      "result": "Request reaches restricted destination using server's network authority"
+    },
+    "trust_transformation": {
+      "attacker_data": "A string (URL, hostname, IP)",
+      "parser_or_interpreter": "URL parser → DNS resolver → HTTP client",
+      "new_meaning": "A network destination",
+      "authority_gained": "Server's network position (internal reachability + ambient credentials)",
+      "effect": "Request to a destination the attacker cannot reach directly"
+    }
+  },
+
+  "exploitability": {
+    "conditions": [
+      { "condition": "Attacker controls the destination (URL, hostname, or IP in a parameter that influences the request target)", "how_to_test": "Can you modify the parameter to specify an arbitrary URL?" },
+      { "condition": "Input reaches a server-side request primitive (the value is passed to an HTTP client, not just stored or displayed)", "how_to_test": "Supply your callback server URL; does the server make a request?" },
+      { "condition": "Server has a privileged network position (can reach destinations the attacker cannot)", "how_to_test": "Is the server on an internal network with access to internal services, metadata endpoints, or localhost?" },
+      { "condition": "Restricted destination is reachable from the server", "how_to_test": "Can the server reach the target internal service/metadata endpoint?" },
+      {
+        "operator": "OR",
+        "label": "Observable capability exists",
+        "conditions": [
+          { "condition": "Response content returned to attacker (full-response SSRF)", "how_to_test": "Does the application display the fetched content?" },
+          { "condition": "Out-of-band callback observable (blind SSRF with OOB)", "how_to_test": "Does your callback server receive a request from the server?" },
+          { "condition": "Timing or error differences observable (blind inference)", "how_to_test": "Do response times or error messages differ for reachable vs. unreachable internal hosts?" },
+          { "condition": "Meaningful side-effect triggerable (blind with side-effect)", "how_to_test": "Can the internal service be triggered to perform an observable action?" }
+        ]
+      }
+    ],
+    "gate_rule": "If any AND condition is false, the attack path breaks. Within the OR group, at least one must be true for exploitability."
+  },
+
+  "investigation": {
+    "attack_surface": [
+      "Any feature that accepts a URL as input (webhook config, URL preview, fetch-from-URL import, image URL, PDF generation from URL, API callback)",
+      "Parameters containing full or partial URLs (url=, stockApi=, callback=, next=, dest=, imageUrl=, path=)",
+      "Features that display or process remote content server-side",
+      "Data formats supporting URL references (XML with external entities, SVG with external references, HTML import)",
+      "HTTP headers that may influence server-side requests (Referer header used for analytics fetching)",
+      "Partial URL components in parameters (hostname-only, path-only) assembled server-side into a full URL"
+    ],
+
+    "hypotheses": [
+      { "id": "H1", "hypothesis": "Browser fetches the URL (client-side)", "predicted_observation": "Callback from your browser IP, not the server IP" },
+      { "id": "H2", "hypothesis": "Application server fetches the URL (server-side)", "predicted_observation": "Callback from application server IP" },
+      { "id": "H3", "hypothesis": "Third-party service fetches the URL", "predicted_observation": "Callback from known CDN/proxy IP" },
+      { "id": "H4", "hypothesis": "URL is stored but never fetched", "predicted_observation": "No callback received" }
+    ],
+
+    "minimal_experiments": [
+      {
+        "hypothesis": "The application passes my input to a server-side HTTP client (H2)",
+        "experiment": "Supply a URL pointing to a server you control (Burp Collaborator, webhook.site). Observe: does a request arrive, and from what source IP?",
+        "observation_if_true": "Callback from application server IP → H2 confirmed",
+        "observation_if_false": "Callback from browser IP (H1), proxy IP (H3), or no callback (H4)",
+        "information_gain": "This single experiment distinguishes all four hypotheses.",
+        "next_experiment": "If H2 confirmed → test internal destination reachability"
+      },
+      {
+        "hypothesis": "The server can reach internal/restricted addresses",
+        "experiment": "Supply http://127.0.0.1 or the cloud metadata root path http://169.254.169.254/latest/meta-data/ (directory listing, not credential path). Observe response content, error, or timing difference.",
+        "observation_if_true": "Response contains localhost content or metadata directory listing, OR error/timing pattern differs from external URLs",
+        "observation_if_false": "Same error as external URL / request blocked by validation",
+        "information_gain": "Distinguishes 'server-side request exists' from 'server-side request can cross trust boundary'.",
+        "next_experiment": "If blocked → investigate validation bypass (see defense_analysis). If accessible → determine impact by requesting specific internal endpoints (with authorization to demonstrate impact)."
+      }
+    ],
+
+    "decision_points": [
+      { "question": "Does the application accept a URL or hostname as input?", "yes": "Continue", "no": "Look for indirect URL influence: XML entities, partial URLs, Referer header, stored URLs in data formats" },
+      { "question": "Does the server make an outbound request when you supply a URL to your callback server?", "yes": "Continue — you have a request primitive", "no": "Input may not reach a request sink. Try different parameters, methods, encoding" },
+      { "question": "Does the request originate from the server's IP (not your browser)?", "yes": "Continue — server-side request confirmed", "no": "Client-side fetch, not SSRF" },
+      { "question": "Can you direct the request to an internal/restricted address?", "yes": "Continue — candidate SSRF with trust-boundary crossing", "no": "Validation may be blocking. Investigate bypass (see defense_analysis)" },
+      { "question": "Can you observe the response, a side-effect, or an out-of-band signal?", "yes": "Exploitable SSRF. Determine impact via capability chain", "no": "Blind SSRF. Impact depends on triggerable side-effects" }
+    ]
+  },
+
+  "confirmation": {
+    "what_must_be_proven": [
+      "The request originates from the server, not the client browser",
+      "The attacker can influence the destination",
+      "The destination includes addresses the attacker cannot reach directly",
+      "The result (response, timing, callback, or side-effect) is observable"
+    ],
+    "evidence": [
+      { "strength": "strong", "evidence": "Response contains content from an internal service (cloud metadata directory, internal admin panel HTML)" },
+      { "strength": "strong", "evidence": "Out-of-band callback received from server IP when requesting an internal address" },
+      { "strength": "moderate", "evidence": "Timing/error differences between requests to internal vs. external destinations (connection refused for closed internal port vs. timeout)" },
+      { "strength": "weak", "evidence": "Server makes request to external callback URL (proves server-side request, not internal reachability)" },
+      { "strength": "insufficient", "evidence": "URL parameter exists in the application (does not prove it reaches a request sink)" }
+    ],
+    "safe_confirmation": "Point the URL parameter at your own callback server (Burp Collaborator). Verify the request arrives from the target application's server IP. Then test the metadata root path (/latest/meta-data/) which returns a directory listing — not credentials. Credential retrieval (/latest/meta-data/iam/security-credentials/<role>) should be a deliberate impact-demonstration step after confirming the vulnerability and having explicit authorization."
+  },
+
+  "capability_and_impact": {
+    "primitive": "Server-side request to an attacker-controlled destination from the server's network position",
+    "capabilities": [
+      {
+        "capability": "Server-originated request from trusted IP",
+        "additional_prerequisite": null,
+        "impact": "Confirms SSRF primitive exists"
+      },
+      {
+        "capability": "Internal network reachability",
+        "additional_prerequisite": "Internal services are running and accessible from the server's network",
+        "impact": "Can reach internal APIs, admin panels, databases"
+      },
+      {
+        "capability": "Read internal service responses",
+        "additional_prerequisite": "Full-response SSRF (response content returned to attacker)",
+        "impact": "Confidentiality breach — read internal data"
+      },
+      {
+        "capability": "Cloud metadata access (169.254.169.254)",
+        "additional_prerequisite": "Cloud environment with metadata service enabled; IMDSv1 (GET-only access) or attacker can craft PUT with custom header (IMDSv2). IMDSv2 requires: (1) PUT to /latest/api/token with X-aws-ec2-metadata-token-ttl-seconds header to get a session token, (2) subsequent GETs must include X-aws-ec2-metadata-token header. Most SSRF primitives can only make GET requests and cannot set custom headers, so IMDSv2 blocks the common SSRF→credential path. Full HTTP request control may bypass this.",
+        "impact": "If IMDSv1 or bypassable IMDSv2: IAM role credential theft"
+      },
+      {
+        "capability": "Cloud account actions using stolen credentials",
+        "additional_prerequisite": "IAM role has meaningful permissions (S3 access, EC2 control, etc.)",
+        "impact": "Cloud account compromise proportional to role permissions"
+      }
+    ],
+    "impact_conditions": [
+      "Whether response content is returned (full vs. blind)",
+      "What internal services are reachable from the server",
+      "Whether internal services require authentication from the server's IP",
+      "Whether the server has ambient credentials (cloud IAM roles, service accounts)",
+      "Whether IMDSv1 or IMDSv2 is in use (IMDSv2 blocks most SSRF credential theft)",
+      "Whether the attacker can chain SSRF with other vulnerabilities"
+    ]
+  },
+
+  "traps": {
+    "common_misconceptions": [
+      {
+        "misconception": "SSRF means accessing localhost.",
+        "why_wrong": "SSRF exploits the server's entire network position — internal APIs, adjacent services, cloud metadata, any restricted destination. Localhost is one target, not the definition.",
+        "correct_model": "The vulnerability is destination control + privileged network position. Any restricted destination is relevant."
+      },
+      {
+        "misconception": "SSRF always returns the response.",
+        "why_wrong": "Blind SSRF does not return response content. The primitive still exists — the server makes the request — but the attacker must rely on OOB callbacks, timing, errors, or side-effects.",
+        "correct_model": "Full vs. blind is a spectrum of observability, not a binary. Each variant requires different investigation techniques."
+      },
+      {
+        "misconception": "SSRF = automatic cloud takeover.",
+        "why_wrong": "Cloud credential theft requires: cloud environment, metadata endpoint accessible, IMDSv1 (or IMDSv2 bypass), IAM role attached, and role with meaningful permissions. Each is an additional prerequisite in the capability chain.",
+        "correct_model": "Impact depends on the capability chain. SSRF is the primitive — impact depends on what's reachable and what authority those services grant."
+      },
+      {
+        "misconception": "Blocklisting internal IPs prevents SSRF.",
+        "why_wrong": "Blocklists are bypassable via DNS rebinding, alternative IP representations (decimal, octal, hex, IPv6), redirects, URL parsing disagreements, and double-encoding.",
+        "correct_model": "Blocklists create a cat-and-mouse game because the assumption 'all malicious representations are blocked' is hard to guarantee. Allowlists are more robust because they require the destination to match a known-good pattern."
+      }
+    ],
+    "false_positives": [
+      {
+        "observation": "URL parameter exists in the request",
+        "incorrect_conclusion": "Server fetches this URL",
+        "why_incorrect": "The URL may be used for display, logging, or client-side redirect — never passed to a server-side request primitive.",
+        "what_to_verify_next": "Send a callback-server URL; check if the server actually makes a request to it."
+      },
+      {
+        "observation": "Application displays remote page content",
+        "incorrect_conclusion": "Server-side fetch confirms SSRF",
+        "why_incorrect": "The fetch may be client-side (browser JavaScript). No trust boundary is crossed if the browser makes the request.",
+        "what_to_verify_next": "Check the source IP at your callback server: application server IP vs. your browser IP."
+      },
+      {
+        "observation": "Server makes request to your callback URL",
+        "incorrect_conclusion": "SSRF confirmed",
+        "why_incorrect": "Server-side request exists, but SSRF requires crossing the trust boundary to a restricted destination. If all internal addresses are blocked by effective validation, the invariant is preserved.",
+        "what_to_verify_next": "Test internal destination reachability (127.0.0.1, metadata IP, internal hostnames)."
+      }
+    ],
+    "failed_attempts": [
+      {
+        "attempt": "Supply http://127.0.0.1 directly in the URL parameter",
+        "result": "Blocked or error returned",
+        "why": "Application validates against an internal-IP blocklist before making the request. Validation occurs before the sink.",
+        "lesson": "The defense assumption is 'all internal IP representations are blocked.' Investigate whether the validator and sink interpret the destination differently — URL parsing tricks, DNS rebinding, redirects, alternative IP representations."
+      },
+      {
+        "attempt": "Use DNS rebinding (short-TTL hostname resolving to 127.0.0.1)",
+        "result": "Still blocked",
+        "why": "Application validates the resolved IP (not the hostname) or re-resolves DNS after initial validation. The defense assumption 'DNS is stable between check and connect' is correctly protected.",
+        "lesson": "Defense validates at the correct layer — resolved IP, not hostname string. This is effective. Try other approaches: redirect chains, URL parsing disagreements, scheme switching."
+      }
+    ]
+  },
+
+  "defense_analysis": [
+    {
+      "defense": "IP blocklist (block private ranges: 127.0.0.0/8, 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16)",
+      "assumption": "All representations of internal IP addresses are covered by the blocklist.",
+      "what_must_remain_true": "The blocklist must account for every possible representation that the HTTP client will resolve to an internal IP: decimal (2130706433), octal (017700000001), hex (0x7f000001), IPv6 (::1, ::ffff:127.0.0.1), abbreviated (127.1), and any other format the URL parser or DNS resolver accepts.",
+      "how_assumption_fails": "Alternative IP representations bypass string-matching blocklists. DNS rebinding changes the resolved IP after validation. Redirects change the destination after validation.",
+      "investigation": "Can I find a representation of an internal IP that the blocklist does not recognize but the HTTP client resolves correctly?"
+    },
+    {
+      "defense": "Hostname allowlist (only permit requests to known external domains)",
+      "assumption": "The hostname in the URL unambiguously identifies the destination, and allowed hostnames cannot be manipulated to reach internal addresses.",
+      "what_must_remain_true": "The URL parser correctly extracts the hostname. DNS resolution of allowed hostnames returns only external IPs. No open redirects exist on allowed domains.",
+      "how_assumption_fails": "URL parsing tricks (RFC 3986 §3.2.1 — userinfo@host makes the host the part after '@'). DNS rebinding of allowed hostnames. Open redirects on allowed domains redirect to internal URLs after the allowlist check passes.",
+      "investigation": "Can I manipulate which part of the URL the validator considers the hostname? Can I exploit an open redirect on an allowed domain? Can I make an allowed hostname resolve to an internal IP?"
+    },
+    {
+      "defense": "Validate resolved IP address (resolve DNS, then check the IP against internal ranges before connecting)",
+      "assumption": "The IP resolved during validation is the same IP the HTTP client will connect to.",
+      "what_must_remain_true": "DNS resolution must not change between validation and connection (no rebinding). The HTTP client must not re-resolve DNS. The connection must go to the validated IP, not a different one.",
+      "how_assumption_fails": "DNS rebinding with very short TTL (0s) — first resolution returns a public IP, second returns an internal IP. Some HTTP client libraries re-resolve DNS on redirect or connection retry.",
+      "investigation": "Can I demonstrate that the validation and connection steps observe different DNS resolutions? Does the HTTP client re-resolve on redirect?"
+    },
+    {
+      "defense": "Network segmentation (firewall rules, security groups restricting server egress to internal networks)",
+      "assumption": "The application server cannot reach sensitive internal services regardless of application-layer behavior.",
+      "what_must_remain_true": "Firewall/security-group rules must block the application server from reaching internal services, cloud metadata endpoints, and localhost services on other ports.",
+      "how_assumption_fails": "Overly permissive egress rules. Metadata endpoint (169.254.169.254) not blocked. Internal services on the same host accessible via localhost.",
+      "investigation": "What egress rules apply to the application server? Is the metadata endpoint reachable? Are other services running on localhost?"
+    }
+  ],
+
+  "variants": [
+    {
+      "name": "Full-response SSRF",
+      "condition": "The application returns the fetched content to the attacker in the HTTP response.",
+      "mechanism_detail": "The attacker can read the full response from internal services. This is the highest-impact variant because internal data (admin panels, metadata credentials, API responses) is directly observable.",
+      "investigation_difference": "Standard investigation: supply internal URL, read response. The response content itself proves the trust boundary was crossed.",
+      "how_to_identify": "Supply your callback server URL and check if the response body appears in the application's response.",
+      "how_to_confirm": "Request the cloud metadata root path (169.254.169.254/latest/meta-data/) and verify the response contains the metadata directory listing."
+    },
+    {
+      "name": "Blind SSRF",
+      "condition": "The application makes the server-side request but does not return the response content to the attacker.",
+      "mechanism_detail": "The SSRF primitive exists — the server makes the request — but the attacker cannot read the response. Impact depends on: (1) OOB callbacks confirming the request was made, (2) timing/error differences revealing internal network topology, (3) triggerable side-effects on internal services (e.g., POST to internal admin APIs that perform state changes).",
+      "investigation_difference": "Cannot read response content. Must use: (a) Burp Collaborator / OOB callback to confirm the request reaches attacker-controlled or internal destinations. (b) Timing analysis: requests to open internal ports may return faster than requests to closed ports or external hosts. (c) Error-message differences between reachable and unreachable internal hosts. (d) Side-effect observation: if the internal service performs an action on receipt of the SSRF request.",
+      "how_to_identify": "Application does not display fetched content, but your callback server receives requests from the server IP when you supply URLs.",
+      "how_to_confirm": "Timing/error difference: compare response time for http://127.0.0.1:80 (likely fast — service exists) vs. http://127.0.0.1:9999 (likely timeout — no service). Consistent timing difference suggests the server is making the request and reaching the destination."
+    }
+  ],
+
+  "transfer": {
+    "shared_mechanism": "Trust-boundary confusion: attacker-controlled input causes a privileged component to use its network authority on the attacker's behalf.",
+    "related_topics": [
+      { "topic": "xxe", "shared_principle": "XML external entities trigger server-side requests — SSRF via the XML parser as the input vector rather than a direct URL parameter." },
+      { "topic": "oauth", "shared_principle": "redirect_uri manipulation exploits URL validation gaps similar to SSRF URL validation bypasses. Both depend on the concepts of URL parsing and allowlist enforcement." }
+    ],
+    "transferable_reasoning": "Look for any feature where: (1) user input influences a destination [url-parsing concept], (2) a server-side component makes a request using that destination [network-trust-boundaries concept], and (3) the request can reach destinations the attacker cannot access directly. The specific features below are examples of applying this reasoning.",
+    "new_contexts": [
+      "Webhook URL configuration",
+      "PDF/image generators fetching remote resources",
+      "File import from URL",
+      "API proxy / gateway URL parameters",
+      "Headless browser screenshot/rendering services",
+      "Document processors (DOCX, SVG with external references)",
+      "OAuth/OIDC callback URL configuration",
+      "RSS/Atom feed fetchers",
+      "Link preview / URL unfurling features",
+      "Cloud function triggers with URL parameters"
+    ]
+  },
+
+  "understanding_test": {
+    "novel_scenario": {
+      "scenario": "A thumbnail service accepts a URL parameter. The URL is passed to Chromium running inside a Docker container. The rendered page screenshot is saved to S3, but the response body of the fetched URL is never returned to the user. The container's network allows outbound connections to an internal gRPC service on 10.0.1.50:8443.",
+      "question": "What capability has actually been established? What remains unproven? What observation would you want next?",
+      "reasoning": "The SSRF primitive exists (Chromium makes the request from the container's network). The container can reach 10.0.1.50:8443. However: (1) the response body is not returned, so this is blind SSRF with respect to HTTP responses, (2) Chromium renders a page, so the screenshot may leak information from the rendered internal page, (3) gRPC on 8443 may not respond to HTTP GET requests meaningfully. The attacker should determine: (a) whether the screenshot reveals rendered internal content (visual exfiltration), (b) whether JavaScript in the rendered page can make additional requests or exfiltrate data via the page content, (c) whether Chromium's request capabilities allow interacting with the gRPC service meaningfully.",
+      "answer_key": "The established capability is: attacker controls a URL that Chromium (with internal network access) loads. The unproven elements are: whether internal responses are visible in screenshots, whether JavaScript execution within Chromium can amplify the primitive, and whether the gRPC service is exploitable via HTTP requests from Chromium. The next observation should be: supply a URL to your own server that returns a page with JavaScript that loads an internal URL and renders the result — then check the screenshot for leaked internal content."
+    },
+    "explain_without_name": "Describe the vulnerability mechanism without using the terms 'SSRF' or 'Server-Side Request Forgery'.",
+    "expected_explanation": "An application that makes network requests on behalf of users fails to adequately restrict the destination. The attacker exploits the server's network position — which includes access to internal services, cloud metadata, and localhost — to reach resources the attacker could not access directly from the internet. The server becomes an unwitting proxy, and the destination sees the request as coming from a trusted internal source."
+  },
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "RFC 3986 - Uniform Resource Identifier (URI): Generic Syntax",
+      "url": "https://www.rfc-editor.org/rfc/rfc3986",
+      "tier": 1,
+      "claim": "Defines URI syntax including authority component §3.2 (userinfo@host:port decomposition), §3.2.1 (User Information and '@' delimiter), §2.1 (Percent-Encoding). These are directly relevant to URL parsing disagreements exploitable in SSRF filter bypasses.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "PortSwigger Web Security Academy - Server-side request forgery (SSRF)",
+      "url": "https://portswigger.net/web-security/ssrf",
+      "tier": 2,
+      "claim": "Defines SSRF as causing the server to make requests to unintended locations. Documents trust relationships, attacks against server/backend systems, blocklist/allowlist bypass techniques, blind SSRF, and hidden attack surface (partial URLs, data formats, Referer header).",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "OWASP - Server Side Request Forgery",
+      "url": "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery",
+      "tier": 2,
+      "claim": "Describes SSRF as abusing server functionality to perform requests to internal/external resources on behalf of the server.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S4",
+      "title": "OWASP - Server Side Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "tier": 2,
+      "claim": "Documents SSRF prevention: application-layer validation (allowlists over blocklists, validate after DNS resolution), network-layer controls (egress filtering, segmentation), defense-in-depth. Documents DNS rebinding as bypass.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S5",
+      "title": "AWS - Instance metadata and user data",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html",
+      "tier": 3,
+      "claim": "EC2 instance metadata at 169.254.169.254. IMDSv1 allows GET; IMDSv2 requires PUT with X-aws-ec2-metadata-token-ttl-seconds header for token, then GET with X-aws-ec2-metadata-token header. IAM credentials at /latest/meta-data/iam/security-credentials/<role-name>.",
+      "retrieved_this_pass": true
+    }
+  ]
+}

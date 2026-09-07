@@ -1,0 +1,46 @@
+{
+  "mechanism": "trust-boundary-confusion",
+  "display_name": "Trust-Boundary Confusion",
+
+  "core_principle": "Attacker-controlled input causes a privileged component to act on the attacker's behalf, crossing a trust boundary that should separate the attacker from the privileged capability. The component has authority the attacker lacks — network position, file system access, credentials, or elevated permissions. The attacker does not gain the component's identity; they gain the component's capability by controlling its actions.",
+
+  "conditions": [
+    "A component has authority the attacker lacks (network position, credentials, file access, elevated permissions)",
+    "Attacker-controlled input influences what the privileged component does (destination, command, resource path)",
+    "The trust boundary between the attacker and the capability is not enforced at the input layer — the component acts on the input without verifying whether the attacker should have the resulting capability"
+  ],
+
+  "members": ["ssrf", "xxe"],
+
+  "investigation_question": "Can attacker-controlled input cause a privileged component to perform an action the attacker could not perform directly? What capability does the attacker gain — and what authority makes that capability possible?",
+
+  "defensive_implication": "Validate attacker-controlled input against a strict allowlist before passing it to any privileged component. The validation must constrain the action to only those operations the attacker is authorized to trigger. Apply defense-in-depth at the infrastructure layer — assume the application-level validation may be bypassed and limit the privileged component's own capabilities (network segmentation, least-privilege IAM roles, disabled metadata endpoints).",
+
+  "common_manifestations": [
+    "SSRF: Attacker controls the destination of a server-side HTTP request, gaining the server's network position",
+    "XXE with external entities: XML parser fetches attacker-controlled URLs using the server's file/network access",
+    "PDF generators that fetch attacker-controlled URLs using the server's network position",
+    "Headless browsers (Chromium, wkhtmltopdf) rendering attacker-controlled URLs from the server's network"
+  ],
+
+  "related_concepts": ["url-parsing", "dns-resolution", "http-redirects", "network-trust-boundaries"],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "PortSwigger - Server-side request forgery (SSRF)",
+      "url": "https://portswigger.net/web-security/ssrf",
+      "tier": 2,
+      "claim": "SSRF attacks exploit trust relationships to escalate an attack from the vulnerable application and perform unauthorized actions, leveraging trust relationships with the server or back-end systems",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "OWASP - Server Side Request Forgery",
+      "url": "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery",
+      "tier": 2,
+      "claim": "SSRF allows an attacker to abuse server functionality to perform requests to internal/external resources on behalf of the server",
+      "retrieved_this_pass": true
+    }
+  ]
+}

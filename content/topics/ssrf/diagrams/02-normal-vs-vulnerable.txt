@@ -1,0 +1,58 @@
+===============================================================================
+DIAGRAM 2: NORMAL VS. VULNERABLE REQUEST FLOW
+===============================================================================
+
+--- NORMAL / INTENDED ARCHITECTURE ---
+
+ [ Client / User ]
+         │
+         │ 1. Request: GET /stock?productId=42
+         ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ Application Server                                          │
+ │                                                             │
+ │   - Reads productId parameter ("42")                        │
+ │   - Target destination is HARDCODED or ALLOWLISTED:         │
+ │     target = "https://inventory-api.internal/items/" + id   │
+ │   - Destination host cannot be changed by user input        │
+ └──────────────────────────────┬──────────────────────────────┘
+                                │
+                                │ 2. Outbound HTTP Request
+                                ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ Trusted Internal Inventory API                              │
+ │ (https://inventory-api.internal)                            │
+ └─────────────────────────────────────────────────────────────┘
+ Security Invariant Holds:
+ Destination host is determined exclusively by the application logic.
+
+
+--- VULNERABLE ARCHITECTURE (SSRF) ---
+
+ [ Attacker ]
+         │
+         │ 1. Request: POST /fetch
+         │    Body: { "url": "http://169.254.169.254/latest/meta-data/" }
+         ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ Application Server                                          │
+ │                                                             │
+ │   - Reads "url" parameter directly from user input          │
+ │   - Fails to enforce strict destination allowlist           │
+ │   - Delegates destination host selection to attacker:       │
+ │     client.get(req.body.url)                                │
+ └──────────────────────────────┬──────────────────────────────┘
+                                │
+                                │ 2. Server makes outbound request
+                                │    FROM ITS OWN NETWORK INTERFACE
+                                ▼
+ ┌─────────────────────────────────────────────────────────────┐
+ │ Restricted Destination                                      │
+ │ (169.254.169.254 / localhost / 10.0.0.0/8)                  │
+ │                                                             │
+ │ - Sees request coming from local/internal IP                │
+ │ - Grants ambient authority (e.g., returns IAM credentials)  │
+ └─────────────────────────────────────────────────────────────┘
+ Security Invariant Violated:
+ Attacker has gained unauthorized use of the server's network position.
+===============================================================================

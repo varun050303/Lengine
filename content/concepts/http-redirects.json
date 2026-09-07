@@ -1,0 +1,46 @@
+{
+  "concept": "http-redirects",
+  "display_name": "HTTP Redirects",
+
+  "summary": "How HTTP redirect responses (3xx status codes) cause clients to issue follow-up requests to a new URL, and why redirect-following behavior introduces security-relevant state changes — particularly when validation occurs before the redirect but the action occurs after.",
+
+  "mental_model": "An HTTP redirect tells a client to make a new request to a different URL. If a server-side HTTP client follows redirects automatically, the effective destination may differ from the originally validated URL. Validation happens on the initial URL; the action (the actual connection) happens on the redirect target. This creates a TOCTOU-like gap where the redirect target can point to a restricted destination that would have been blocked by initial validation.",
+
+  "mechanism": "HTTP status codes 301, 302, 303, 307, and 308 signal redirects. The Location header specifies the new URL. Most HTTP client libraries follow redirects automatically by default. When an application validates a user-supplied URL and then passes it to an HTTP client that follows redirects, the redirect target is not re-validated. The redirect can point to an internal IP, a different scheme (http→file, http→gopher), or a different port.",
+
+  "security_relevance": [
+    "SSRF — redirects bypass URL validation by changing the effective destination after the check",
+    "Open redirect — attacker-controlled redirect chains can send users to malicious sites",
+    "SSRF — scheme changes during redirect (http→file, http→gopher) can access non-HTTP protocols",
+    "OAuth — redirect_uri manipulation via open redirects to leak authorization codes"
+  ],
+
+  "common_assumptions": [
+    {
+      "assumption": "The URL validated is the URL that will be fetched.",
+      "why_it_can_fail": "If the HTTP client follows redirects, the effective destination is the final redirect target, not the initially validated URL.",
+      "security_relevance": "SSRF: Validate http://allowed-host.com which redirects to http://169.254.169.254/latest/meta-data/"
+    },
+    {
+      "assumption": "Redirects stay within the same scheme.",
+      "why_it_can_fail": "A redirect from http:// to file:// or gopher:// is valid HTTP. Some HTTP clients follow cross-scheme redirects.",
+      "security_relevance": "SSRF: Scheme-switching redirects can access local files or interact with non-HTTP services."
+    },
+    {
+      "assumption": "The application controls the redirect destination.",
+      "why_it_can_fail": "An open redirect on an allowed domain lets the attacker control the final destination via the redirect chain.",
+      "security_relevance": "SSRF filter bypass via open redirects on allowlisted domains."
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "PortSwigger - Bypassing SSRF filters via open redirection",
+      "url": "https://portswigger.net/web-security/ssrf",
+      "tier": 2,
+      "claim": "Documents using open redirects on allowed domains to bypass SSRF URL filters",
+      "retrieved_this_pass": true
+    }
+  ]
+}

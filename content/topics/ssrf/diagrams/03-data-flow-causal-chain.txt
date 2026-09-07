@@ -1,0 +1,45 @@
+===============================================================================
+DIAGRAM 3: CAUSAL CHAIN & DATA FLOW
+===============================================================================
+
+[ ATTACKER DATA ]
+  Source: Raw string input in HTTP parameter, JSON payload, or header
+  Example: "http://attacker-controlled-host:80/path"
+        │
+        ▼
+[ TRANSFORMATION LAYER ]
+  1. Parameter parsing & URL decoding (%2f -> /, %40 -> @)
+  2. Optional Validation check (flawed allowlist, blocklist, or regex)
+        │
+        ▼
+[ PARSER INTERPRETATION (RFC 3986 §3.2) ]
+  HTTP Client decomposes URI:
+    Scheme:    "http"
+    Authority: [userinfo@]host[:port]
+    Path:      "/path"
+        │
+        ▼
+[ RESOLUTION LAYER (DNS) ]
+  Operating system / resolver resolves hostname to IP address (A/AAAA record):
+  - Normal: "example.com" -> 93.184.216.34
+  - Rebinding: "rebind.com" -> 93.184.216.34 (at check) -> 127.0.0.1 (at connect)
+        │
+        ▼
+[ SINK / ACTION PRIMITIVE ]
+  Kernel socket execution:
+  - connect(socket_fd, { sockaddr_in: 127.0.0.1:80 }, ...)
+  - Outbound TCP/TLS handshake executed with SERVER's IP as source IP
+        │
+        ▼
+[ UNINTENDED INTERPRETATION & AUTHORITY CROSSING ]
+  Destination server evaluates packet:
+  - Source IP is within local loopback or VPC subnet
+  - Destination assumes caller is internal / trusted (ambient authority)
+        │
+        ▼
+[ EFFECT & OBSERVABILITY ]
+  - Full SSRF: Internal response passed back to attacker
+  - Blind SSRF (OOB): Destination or external callback logs connection
+  - Blind SSRF (Inference): Socket timeout vs. connection refused timing differences
+  - Blind SSRF (Side-Effect): Internal state modified (e.g., admin action executed)
+===============================================================================

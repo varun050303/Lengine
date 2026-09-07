@@ -1,0 +1,62 @@
+{
+  "concept": "network-trust-boundaries",
+  "display_name": "Network Trust Boundaries",
+
+  "summary": "How network architecture creates implicit trust relationships — internal networks trust requests from internal IPs, cloud metadata services trust requests from instance IPs, and localhost services trust requests from the loopback interface — and why these trust relationships become exploitable when an attacker can cause a trusted component to make requests on their behalf.",
+
+  "mental_model": "Network trust is positional: a service decides who to trust based on where the request comes from, not who initiated it. Internal services trust internal IPs. Cloud metadata trusts instance IPs. Localhost services trust the loopback interface. If an attacker can cause a server to make a request, the request arrives from the server's IP — which is trusted — regardless of who actually initiated it.",
+
+  "mechanism": "Network segmentation creates zones of trust. The most common trust boundaries in web applications are: (1) Internet ↔ DMZ — firewalls restrict inbound access. (2) DMZ ↔ Internal network — application servers in the DMZ may have access to internal services. (3) Any host ↔ Localhost — services bound to 127.0.0.1 are only accessible from the same machine. (4) Instance ↔ Cloud metadata — the metadata endpoint (169.254.169.254) is accessible only from within the cloud instance. These boundaries are enforced by network position (source IP), not by authentication. When SSRF allows an attacker to make the server issue requests, the requests cross these boundaries using the server's trusted position.",
+
+  "security_relevance": [
+    "SSRF — the core mechanism exploits the server's network trust to reach internal services",
+    "Cloud credential theft — metadata endpoints (AWS 169.254.169.254, GCP, Azure) return IAM credentials to any request from the instance",
+    "Lateral movement — internal services often have weak or no authentication because they rely on network position for access control",
+    "Localhost attacks — services bound to loopback trust all local connections"
+  ],
+
+  "common_assumptions": [
+    {
+      "assumption": "Internal services are protected because they are not reachable from the internet.",
+      "why_it_can_fail": "SSRF makes the application server act as a proxy. The request reaches the internal service from a trusted internal IP.",
+      "security_relevance": "SSRF: Internal admin panels, databases, and APIs accessible via SSRF without authentication."
+    },
+    {
+      "assumption": "Cloud metadata is safe because it's only accessible from within the instance.",
+      "why_it_can_fail": "If SSRF allows the server to request http://169.254.169.254/latest/meta-data/, the metadata service returns IAM role credentials because the request comes from the instance itself.",
+      "security_relevance": "SSRF to cloud credential theft — one of the highest-impact SSRF attack paths."
+    },
+    {
+      "assumption": "Network-level access control is sufficient for service protection.",
+      "why_it_can_fail": "Network-level controls prevent direct external access but do not prevent indirect access via a compromised or misused internal component (SSRF).",
+      "security_relevance": "Defense-in-depth: internal services should still require authentication, not rely solely on network position."
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "PortSwigger - SSRF attacks against other back-end systems",
+      "url": "https://portswigger.net/web-security/ssrf",
+      "tier": 2,
+      "claim": "Internal back-end systems are normally protected by the network topology and often have a weaker security posture; they contain sensitive functionality accessible without authentication by anyone who can interact with them",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "AWS - Instance metadata and user data",
+      "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html",
+      "tier": 3,
+      "claim": "EC2 instance metadata service (IMDS) is accessible at 169.254.169.254 from within the instance; IMDSv2 requires a PUT request to obtain a session token",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "OWASP - SSRF Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "tier": 2,
+      "claim": "Recommends network segmentation and disabling unnecessary cloud metadata endpoints as defense-in-depth against SSRF",
+      "retrieved_this_pass": true
+    }
+  ]
+}

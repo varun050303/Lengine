@@ -1,0 +1,46 @@
+===============================================================================
+DIAGRAM 1: SSRF TRUST BOUNDARY CROSSING
+===============================================================================
+
+                UNTRUSTED / EXTERNAL                      TRUSTED / INTERNAL
+                     ZONE                                       ZONE
+ ┌─────────────────────────────────────────┐  │  ┌─────────────────────────────────┐
+ │                                         │  │  │                                 │
+ │  Attacker                               │  │  │  Internal Services              │
+ │  [IP: 198.51.100.42]                    │  │  │  - Admin Panels (10.0.1.5)      │
+ │                                         │  │  │  - Internal APIs (192.168.1.10) │
+ │       │                                 │  │  │  - Databases / Redis (6379)     │
+ │       │ 1. Supplies parameter           │  │  │                                 │
+ │       │    url=http://169.254.169.254/  │  │  │  Cloud Metadata Service         │
+ │       ▼                                 │  │  │  - 169.254.169.254 (IMDS)       │
+ │  ┌───────────────────────────────────┐  │  │  │                                 │
+ │  │ Public Web Server / App Gateway   │  │  │  │  Localhost Services             │
+ │  │                                   │  │  │  │  - 127.0.0.1:[ports]            │
+ │  │ Sinks:                            │  │  │  │                                 │
+ │  │ - curl / requests / HttpClient    │  │  │  └────────────────┬────────────────┘
+ │  │ - Headless browser / PDF renderer │  │  │                   ▲
+ │  │                                   │  │  │                   │
+ │  └─────────────────┬─────────────────┘  │  │                   │
+ │                    │                    │  │                   │
+ └────────────────────┼────────────────────┘  │                   │
+                      │                       │                   │
+                      │ 2. Issues request     │                   │
+                      │    using server's     │                   │
+                      │    network interface  │                   │
+                      ▼                       │                   │
+      ════════════════════════════════════════╪═══════════════════╪═════════════
+             NETWORK TRUST BOUNDARY           │                   │
+             (Firewall / VPC / NAT Gateway)   │                   │
+      ════════════════════════════════════════╪═══════════════════╪═════════════
+                                              │                   │
+                                              │ 3. Connection originates from
+                                              │    trusted internal IP
+                                              │    (e.g., 10.0.1.100)
+                                              └───────────────────┘
+
+KEY STRUCTURAL PROPERTY:
+The target destination evaluates the request based on the SOURCE NETWORK POSITION
+(ambient network authority: IP address, VPC membership, lack of edge firewall).
+The attacker never needs credentials to the destination if the destination implicitly
+trusts requests originating from the application server.
+===============================================================================

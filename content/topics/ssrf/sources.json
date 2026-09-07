@@ -1,0 +1,42 @@
+[
+  {
+    "id": "S1",
+    "title": "RFC 3986 - Uniform Resource Identifier (URI): Generic Syntax",
+    "url": "https://www.rfc-editor.org/rfc/rfc3986",
+    "tier": 1,
+    "claim": "Defines URI syntax including authority component (userinfo@host:port), percent-encoding rules, and component delimiters that are relevant to URL parsing disagreements exploited in SSRF filter bypasses",
+    "retrieved_this_pass": true
+  },
+  {
+    "id": "S2",
+    "title": "PortSwigger Web Security Academy - Server-side request forgery (SSRF)",
+    "url": "https://portswigger.net/web-security/ssrf",
+    "tier": 2,
+    "claim": "Defines SSRF as causing the server to make requests to unintended locations. Documents: trust relationships enabling SSRF, attacks against the server and back-end systems, blacklist/whitelist bypass techniques (IP representations, DNS, URL parsing, open redirects), blind SSRF, hidden attack surface (partial URLs, data formats, Referer header)",
+    "retrieved_this_pass": true
+  },
+  {
+    "id": "S3",
+    "title": "OWASP - Server Side Request Forgery",
+    "url": "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery",
+    "tier": 2,
+    "claim": "Describes SSRF as abusing server functionality to perform requests to internal/external resources on behalf of the server",
+    "retrieved_this_pass": true
+  },
+  {
+    "id": "S4",
+    "title": "OWASP - Server Side Request Forgery Prevention Cheat Sheet",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+    "tier": 2,
+    "claim": "Documents SSRF prevention strategies including: application-layer validation (allowlists over blocklists, validate after DNS resolution), network-layer controls (egress filtering, network segmentation), and the need for defense-in-depth. Documents DNS rebinding as a bypass technique and recommends validating resolved IP addresses",
+    "retrieved_this_pass": true
+  },
+  {
+    "id": "S5",
+    "title": "AWS - Instance metadata and user data",
+    "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html",
+    "tier": 3,
+    "claim": "EC2 instance metadata service is accessible at 169.254.169.254. IMDSv1 allows simple GET requests; IMDSv2 requires a PUT request to /latest/api/token to obtain a session token that must be included in subsequent GET requests via the X-aws-ec2-metadata-token header. IAM role credentials are available at /latest/meta-data/iam/security-credentials/<role-name>",
+    "retrieved_this_pass": true
+  }
+]
