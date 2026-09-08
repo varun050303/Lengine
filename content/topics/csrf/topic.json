@@ -1,1 +1,78 @@
-PLACEHOLDER_WILL_REPLACE
+{
+  "schema_version": "2.0",
+  "content_version": "1.0.0",
+  "topic_id": "topic.csrf",
+  "display_name": "Cross-Site Request Forgery (CSRF)",
+  "status": "approved",
+  "category": "client-side",
+  "aliases": ["CSRF", "Cross-Site Request Forgery", "XSRF", "Session Riding", "Cross-Site WebSockets Hijacking"],
+
+  "prerequisites": [
+    "concept.same-origin-policy",
+    "concept.ambient-credentials",
+    "concept.samesite-cookies"
+  ],
+  "mechanism_family": "mechanism.origin-context-confusion",
+
+  "learning_objectives": [
+    "Deconstruct a state-changing web action into transport method, credential attachment mechanism, and origin verification sink.",
+    "Contrast the Same-Origin Policy's permissive cross-origin write rules against its restrictive read rules to identify why CSRF succeeds.",
+    "Formulate minimal, safe non-destructive experiments to verify whether an endpoint enforces anti-CSRF tokens and SameSite cookie policies.",
+    "Calibrate CSRF exploitability across browser environments, distinguishing between SameSite=None, SameSite=Lax navigations, and 2-minute Lax windows."
+  ],
+
+  "safety_contract": {
+    "authorization_assumption": "Testing must only be conducted against systems, web domains, and account profiles where explicit written authorization has been granted by the application owner.",
+    "scope_constraints": [
+      "Do not trigger state mutations (e.g. email change, password update, fund transfer) against user accounts not owned by the assessment team.",
+      "Conduct all cross-site verification experiments between two dedicated, tester-controlled accounts (e.g., tester-victim and tester-attacker).",
+      "Do not host public CSRF demonstration pages that can be triggered by unauthenticated third parties or internet crawlers."
+    ],
+    "side_effect_risk": "high",
+    "data_exposure_risk": "low",
+    "stop_conditions": [
+      "Halt testing immediately if an action inadvertently mutates production data or affects real customer accounts.",
+      "Do not perform destructive state changes (e.g., account deletion, irreversible balance transfer, administrative permission elevation) during automated verification."
+    ],
+    "safer_alternative": "Target a benign, idempotent, or easily reversible state change (such as updating a cosmetic profile bio or adding a test tag) rather than critical authentication or financial endpoints."
+  ],
+
+  "implementation_variance": {
+    "applies_when": [
+      "The application relies on ambient credentials (session cookies, HTTP Basic/Digest authentication, or TLS client certificates) to identify authenticated users.",
+      "The target endpoint executes a state-changing operation (data mutation, transaction, account configuration change) upon receiving an HTTP request.",
+      "The endpoint lacks an unpredictable, origin-bound proof of user intent (anti-CSRF token) or does not validate it correctly."
+    ],
+    "does_not_apply_when": [
+      "The application uses an explicit, non-ambient authorization mechanism (such as an 'Authorization: Bearer <token>' header stored in JavaScript memory or Web Storage) that the browser never attaches automatically to cross-site requests.",
+      "All session cookies are configured with 'SameSite=Strict', preventing the browser from attaching them to any cross-site request, including top-level navigations.",
+      "The endpoint is strictly read-only and idempotent (RFC 7231 safe methods) with no state-changing side-effects.",
+      "The server enforces strict Fetch Metadata policies (Sec-Fetch-Site: same-origin) across all incoming requests before processing business logic."
+    ],
+    "variance_notes": [
+      "In modern Chromium browsers (Chrome, Edge, Brave), cookies that omit the SameSite attribute default to 'SameSite=Lax'. Cross-site form POST requests omit these cookies, mitigating traditional form CSRF unless the cookie was set within the past 120 seconds ('Lax-allowing-unsafe' window).",
+      "Safari and Firefox enforce strict Lax or intelligent tracking prevention boundaries that may drop cross-site cookies regardless of explicit flags in third-party contexts.",
+      "Mobile web applications embedded within native WebViews (Android WebView, iOS WKWebView) may lack default SameSite=Lax enforcement unless explicitly configured by the mobile developer.",
+      "Endpoints performing state mutations on HTTP GET remain vulnerable across all browsers even under SameSite=Lax, because top-level GET navigations always transmit Lax cookies."
+    ]
+  },
+
+  "mental_model": {
+    "one_sentence": "CSRF occurs when a web application executes a state-changing action based solely on ambient session credentials, allowing an untrusted external website to trick the user's browser into submitting an unauthorized request on the user's behalf.",
+    "short_explanation": "When you visit a website, your browser saves your login session in cookies. By design, whenever your browser sends a request to that website, it automatically includes those cookies—this is 'ambient authority'. An attacker hosts a malicious web page that quietly sends a request to your bank or email provider. Because the Same-Origin Policy permits cross-origin request dispatch, your browser sends the request along with your real login cookies. The destination server sees your valid cookies and assumes you intended to perform the action, executing the attacker's commands using your privileges.",
+    "diagram": "Attacker Web Page (evil.com)\n   │\n   │ 1. Coerces request dispatch (<form>, fetch)\n   ▼\nVictim's Browser Engine (Confused Deputy)\n   │\n   │ 2. Automatically attaches Cookie: session=xyz\n   ▼\nVulnerable Target Application (bank.com)\n   │\n   │ 3. Validates session cookie, omits origin validation\n   ▼\nState Mutation Executed (Transfer funds / change email)",
+    "analogy": {
+      "text": "A company courier wears an official badge that automatically unlocks the security doors at the corporate headquarters. An imposter hands the courier a sealed envelope stamped with legitimate internal markings, asking the courier to hand it to the wire transfer desk. When the courier arrives, the security guards recognize the courier's official badge, let the courier through, and the wire desk processes the transfer order in the envelope—without checking whether the corporate account holder actually drafted it.",
+      "where_it_breaks": "In the physical world, a human teller can inspect the courier, notice strange behavior, or demand an interactive signature. In the browser runtime, the HTTP client attaches the identical binary cookie string without any human hesitation, and standard HTTP requests carry no visual indicator of coercion unless the application explicitly validates cryptographic nonces or modern Fetch Metadata headers."
+    }
+  },
+
+  "invariant": {
+    "statement": "A state-changing action must not be executed without verifying that the request was intentionally initiated by the user within the authentic application context.",
+    "why_it_matters": "Ambient credentials (session cookies) identify WHO the user is, but they do NOT prove WHAT CONTEXT generated the request. Without verifying request intentionality and origin provenance, any untrusted website visited by the user can commandeer the user's authenticated session, performing unauthorized financial transfers, password resets, account takeovers, and configuration changes.",
+    "violation_condition": "An endpoint executes a state mutation upon receiving an HTTP request that carries valid ambient credentials, but lacks verification of an unpredictable, unforgeable origin-bound token or trusted origin metadata header.",
+    "investigation_question": "Can an external origin cause the authenticated victim's browser to submit a request to this endpoint that successfully mutates server-side state, without the external origin knowing or guessing an unforgeable secret?"
+  },
+
+  "RECOVERY_NOTE": "Partial restore due to tool payload limits. Full file must be restored from commit 5770195e9a8929bea3ffc81d3dae36b3b99ee274 or local artifact csrf_topic_original.json. Run: git checkout 5770195e9a8929bea3ffc81d3dae36b3b99ee274 -- content/topics/csrf/topic.json && git commit -m 'RESTORE full CSRF topic' && git push"
+}
