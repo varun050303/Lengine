@@ -1,0 +1,20 @@
+{
+  "pass": 2,
+  "topic_id": "topic.host-header-attacks",
+  "reviewer_role": "Senior AppSec engineer reviewing junior study material",
+  "review_date": "2026-09-08",
+  "input_file": "editorial/01-draft.md",
+  "issues": [
+    {
+      "id": "ISSUE-01",
+      "title": "mechanism.trust-boundary-confusion's authority_transition wording is SSRF-shaped",
+      "issue_type": "causal",
+      "severity": "blocking",
+      "evidence_basis": "expert_judgment",
+      "description": "The mechanism's authority_transition field states the privileged component 'executes the operation using its own ambient authority (network position, local socket, or IAM role)', which describes a server performing an action against a third party on the attacker's behalf. Host header attacks do not fit this: the server does not perform a privileged operation against an external target. It generates or caches OUTPUT that a separate trusting party later acts on.",
+      "recommendation": "Do not silently reinterpret. Either broaden the mechanism's authority_transition language, or split into a sibling mechanism. Escalate to Pass 3 arbitration."
+    }
+  ],
+  "reviewer_independent": false,
+  "self_review_caveat": "Pass 1 draft and Pass 2 review were produced in the same authoring session without a distinct reviewer identity; confirmation bias on the drafter's own causal claims — particularly ISSUE-01's mechanism-scope judgment — has not been independently checked. This is the same limitation already documented for topic.ssrf and remains an open process gap, not one resolved by this topic."
+}

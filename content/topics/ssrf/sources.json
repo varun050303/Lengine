@@ -38,5 +38,21 @@
     "tier": 3,
     "claim": "EC2 instance metadata service is accessible at 169.254.169.254. IMDSv1 allows simple GET requests; IMDSv2 requires a PUT request to /latest/api/token to obtain a session token that must be included in subsequent GET requests via the X-aws-ec2-metadata-token header. IAM role credentials are available at /latest/meta-data/iam/security-credentials/<role-name>",
     "retrieved_this_pass": true
+  },
+  {
+    "id": "S6",
+    "title": "CWE-918: Server-Side Request Forgery (SSRF)",
+    "url": "https://cwe.mitre.org/data/definitions/918.html",
+    "tier": 2,
+    "claim": "Defines SSRF as a weakness where the web server receives a URL or similar request and retrieves contents without ensuring it is sent to the expected destination.",
+    "retrieved_this_pass": true
+  },
+  {
+    "id": "S7",
+    "title": "Orange Tsai - A New Era of SSRF (BlackHat USA 2017)",
+    "url": "https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf",
+    "tier": 4,
+    "claim": "Documents URL parser disagreements across programming languages (Python, PHP, NodeJS, Ruby, Java) enabling SSRF filter bypasses via inconsistent authority decomposition and scheme handling.",
+    "retrieved_this_pass": true
   }
 ]

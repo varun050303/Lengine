@@ -1,0 +1,74 @@
+{
+  "schema_version": "2.0",
+  "concept_id": "concept.same-origin-policy",
+  "display_name": "Same-Origin Policy",
+  "status": "approved",
+
+  "summary": "The fundamental browser security mechanism that isolates resources across different origins (protocol, host, and port tuple). Crucially, the Same-Origin Policy enforces asymmetric isolation: it strictly blocks cross-origin reading of response data, but historically permits cross-origin sending of requests (such as form submissions, image loads, and simple POSTs), creating the structural prerequisite for cross-site request forgery.",
+
+  "bounded_scope": {
+    "covers": "Browser origin definition (scheme, host, port), DOM tree isolation, XMLHttpRequest and Fetch read-access restrictions, and the distinction between cross-origin writes (permitted) and cross-origin reads (blocked).",
+    "delegates": "Cookie attachment rules and cross-site isolation attributes are delegated to concept.samesite-cookies; implicit session credential transport is delegated to concept.ambient-credentials; selective relaxation of read restrictions is delegated to topic.cors."
+  },
+
+  "learning_objectives": [
+    "Evaluate whether two arbitrary URIs share the same origin by comparing their scheme, host, and port tuple.",
+    "Differentiate the Same-Origin Policy's permissive write/send posture from its restrictive read posture to identify why cross-origin state changes succeed."
+  ],
+
+  "mental_model": "The Same-Origin Policy is an asymmetric boundary: it is primarily designed to prevent cross-origin reading, not cross-origin sending. If origin A embeds a form targeting origin B, the browser sends the request to origin B (along with B's credentials). However, the browser prevents origin A from reading the response from origin B. Attackers exploit this asymmetry in CSRF: when the target action is a state-changing operation, triggering the action is sufficient to achieve impact—the attacker does not need to inspect the response.",
+
+  "mechanism": "An origin is defined by RFC 6454 as the tuple (scheme, host, port). Two URLs belong to the same origin if and only if all three components match exactly. The browser enforces this boundary in two primary ways: (1) DOM access: Scripts executing in origin A cannot access the DOM, window objects, or global variables of frames or windows belonging to origin B. (2) Network requests: While XMLHttpRequest and Fetch requests to origin B can be initiated, the response body and headers are withheld from origin A's script unless origin B explicitly permits reading via CORS headers. However, for legacy web compatibility, the browser does not block the dispatch of standard cross-origin network requests (such as HTML <form> POST/GET, <img>, <script>, or <iframe> tags). These cross-origin dispatches execute against origin B and cause server-side side-effects unless additional application-layer or cookie-layer controls intervene.",
+
+  "security_relevance": [
+    "CSRF: Exploits SOP's permissive write behavior where cross-origin requests are dispatched with credentials even though responses cannot be read.",
+    "CORS: Mechanisms designed to selectively relax the SOP's read restrictions for authorized cross-origin consumers.",
+    "Clickjacking: Overlays transparent frames across origins to trick users into interacting with a protected UI.",
+    "DOM XSS: Bypasses SOP entirely by executing attacker-controlled JavaScript directly within the victim origin's execution context."
+  ],
+
+  "common_assumptions": [
+    {
+      "assumption": "The Same-Origin Policy stops an external site from sending HTTP requests to my application.",
+      "why_wrong": "The Same-Origin Policy restricts JavaScript from reading the response of a cross-origin request; it does not stop the browser from issuing the request or the server from processing it.",
+      "security_implication": "CSRF: Developers mistakenly assume SOP protects state-changing endpoints from unauthorized external initiation."
+    },
+    {
+      "assumption": "Enabling CORS headers or configuring CORS properly prevents CSRF.",
+      "why_wrong": "CORS is an opt-in mechanism to relax read restrictions for cross-origin AJAX requests. It does not protect against standard HTML form submissions or simple cross-origin requests, which execute before any CORS preflight or response inspection.",
+      "security_implication": "False sense of security: Teams implement CORS allowlists thinking they prevent cross-site request forgery, leaving endpoints vulnerable."
+    },
+    {
+      "assumption": "Subdomains are isolated by default under the Same-Origin Policy.",
+      "why_wrong": "While app.example.com and api.example.com are distinct origins, cookies scoped to .example.com are shared across both, and document.domain (legacy) could relax DOM boundaries.",
+      "security_implication": "Cookie tossing and cross-subdomain CSRF attacks when cookies lack host-only scoping."
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "RFC 6454 - The Web Origin Concept",
+      "url": "https://www.rfc-editor.org/rfc/rfc6454",
+      "tier": 1,
+      "claim": "Defines the origin tuple (scheme, host, port) and specifies that user agents isolate resources based on origin boundaries.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "MDN Web Docs - Same-origin policy",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy",
+      "tier": 2,
+      "claim": "Documents that cross-origin writes (links, redirects, form submissions) are typically allowed, cross-origin embedding is typically allowed, and cross-origin reads are typically disallowed.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "OWASP - Cross-Site Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "tier": 2,
+      "claim": "Clarifies that the Same-Origin Policy does not prevent Cross-Site Request Forgery because browsers still dispatch cross-site requests with credentials.",
+      "retrieved_this_pass": true
+    }
+  ]
+}

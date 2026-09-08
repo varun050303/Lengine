@@ -37,6 +37,10 @@ A causal pattern cannot be classified as a **Mechanism** unless it specifies:
 3. **Security Decision Bypassed**: What security check or access control logic fails to constrain the operation.
 4. **Failure Condition**: The exact technical condition under which the intended invariant breaks.
 
+### 1.4 Multi-Family Mechanism Membership
+
+By default, every topic instantiates a single primary mechanism family (defined via `"mechanism_family"` in its `topic.json`). However, vulnerabilities that fundamentally exhibit multiple failure patterns (e.g., XXE acting as both an interpretation boundary violation and trust-boundary confusion) may optionally declare a `"secondary_mechanisms"` array. This acknowledges cross-cutting concerns while preserving the strict "exactly one primary layer" contract for structural hierarchy.
+
 ---
 
 ## 2. The Evidence & Provenance Contract
@@ -150,3 +154,12 @@ Editorial passes (Pass 2 Review and Pass 3 Arbitration) must classify every issu
 - **Decision**: `accept` | `reject` | `modify` | `defer`
 - **Evidence Basis**: `source` | `reproduction` | `expert_judgment` | `learner_test`
 - **Resolution**: Exact modification performed or formal rationale for no change.
+
+### 4.3 Reviewer Independence Requirement
+
+Pass 2 (Skeptical Review) is only a meaningful check if it is not simply the drafter re-reading their own work. Every `02-review.json` must declare:
+
+- **`reviewer_independent`**: `true` if Pass 2 was conducted by a distinct reviewer identity (a different person, or a fresh session/context with no visibility into Pass 1's drafting rationale) than the one that produced `01-draft.md`. `false` otherwise.
+- If `false`, the review must additionally include `self_review_caveat`: a short note naming the self-review risk this creates (e.g. "drafter and reviewer are the same session; confirmation bias on causal claims is unverified").
+
+A topic may still proceed with `reviewer_independent: false`, but Gate D flags it as a warning rather than silently treating the review as equivalent to an independent one.

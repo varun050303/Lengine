@@ -60,7 +60,7 @@
     "diagram": "Attacker\n   │\n   │ controls destination\n   ▼\nApplication\n   │\n   │ makes request from trusted position\n   ▼\nServer-side HTTP client\n   │\n   ▼\nDestination attacker cannot reach directly\n   │\n   ▼\nInternal service / cloud metadata / localhost",
     "analogy": {
       "text": "You give a delivery address to an employee who has badge access to restricted buildings. The employee delivers your package to the address you specified — inside a building you cannot enter. The building's security checks the employee's badge, not your identity.",
-      "where_it_breaks": "Real SSRF involves URL parsing, DNS resolution, HTTP redirect following, multiple protocol support, response handling, and the distinction between full-response and blind variants. The 'employee' may also follow redirect signs that change the effective destination after initial validation."
+      "where_it_breaks": "The analogy implies a single, predictable delivery. Real SSRF involves intermediate transformations (URL parsing, DNS resolution, HTTP redirects) that can change the effective destination after validation — as if the employee follows redirect signs to a different building after the address was already approved."
     }
   },
 
@@ -291,7 +291,7 @@
       },
       {
         "capability": "Cloud metadata access (169.254.169.254)",
-        "additional_prerequisite": "Cloud environment with metadata service enabled; IMDSv1 (GET-only access) or attacker can craft PUT with custom header (IMDSv2). IMDSv2 requires: (1) PUT to /latest/api/token with X-aws-ec2-metadata-token-ttl-seconds header to get a session token, (2) subsequent GETs must include X-aws-ec2-metadata-token header. Most SSRF primitives can only make GET requests and cannot set custom headers, so IMDSv2 blocks the common SSRF→credential path. Full HTTP request control may bypass this.",
+        "additional_prerequisite": "Cloud environment with metadata service enabled. IMDSv1 allows simple GET requests to the metadata endpoint. IMDSv2 blocks this in two ways: (1) it requires a PUT request with a custom header to get a token first — most SSRF primitives only support GET, so they cannot obtain the token, and (2) the default hop limit (TTL=1) means the token request packet expires before crossing a network boundary, so SSRF from inside a container cannot even reach the metadata endpoint. These defenses protect credentials specifically, not internal network access generally.",
         "impact": "If IMDSv1 or bypassable IMDSv2: IAM role credential theft"
       },
       {
@@ -488,6 +488,22 @@
       "url": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html",
       "tier": 3,
       "claim": "EC2 instance metadata at 169.254.169.254. IMDSv1 allows GET; IMDSv2 requires PUT with X-aws-ec2-metadata-token-ttl-seconds header for token, then GET with X-aws-ec2-metadata-token header. IAM credentials at /latest/meta-data/iam/security-credentials/<role-name>.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S6",
+      "title": "CWE-918: Server-Side Request Forgery (SSRF)",
+      "url": "https://cwe.mitre.org/data/definitions/918.html",
+      "tier": 2,
+      "claim": "Defines SSRF as a weakness where the web server receives a URL or similar request and retrieves contents without ensuring it is sent to the expected destination.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S7",
+      "title": "Orange Tsai - A New Era of SSRF (BlackHat USA 2017)",
+      "url": "https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf",
+      "tier": 4,
+      "claim": "Documents URL parser disagreements across programming languages (Python, PHP, NodeJS, Ruby, Java) enabling SSRF filter bypasses via inconsistent authority decomposition and scheme handling.",
       "retrieved_this_pass": true
     }
   ]

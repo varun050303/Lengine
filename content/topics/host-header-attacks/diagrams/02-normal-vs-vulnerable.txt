@@ -1,0 +1,22 @@
+NORMAL vs VULNERABLE
+=====================
+
+NORMAL:
+  Client Host header ----X (ignored for security-sensitive use)
+                          |
+                          v
+  Server-side fixed config / validated allowlist
+                          |
+                          v
+  Generated URL / routing / cache key uses ONLY the trusted value
+
+
+VULNERABLE:
+  Client Host header (or X-Forwarded-Host / X-Forwarded-Server)
+                          |
+                          v (read directly, no independent check)
+  URL-generation logic / routing / cache-key logic
+                          |
+                          v
+  Attacker's chosen domain now embedded in server-generated
+  content or decisions

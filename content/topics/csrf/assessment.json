@@ -1,0 +1,230 @@
+{
+  "schema_version": "2.0",
+  "topic_id": "topic.csrf",
+  "learning_objectives": [
+    {
+      "id": "LO-CSRF-01",
+      "observable_action": "Given an authenticated state-changing feature, analyze its transport and authentication mechanisms to determine whether ambient credentials (cookies) are vulnerable to cross-site dispatch.",
+      "success_criteria": "Learner correctly identifies the credential transmission behavior across SameSite=Strict, Lax, and None policies, distinguishing subresource dispatches from top-level navigations."
+    },
+    {
+      "id": "LO-CSRF-02",
+      "observable_action": "Evaluate application-layer anti-CSRF defenses (synchronizer tokens, double-submit cookies, custom headers) and determine whether underlying assumptions are violated (e.g. token omitted on method switch, token not tied to session, predictable PRNG).",
+      "success_criteria": "Learner systematically tests token validation edge cases without relying on brute force or unstructured guessing."
+    },
+    {
+      "id": "LO-CSRF-03",
+      "observable_action": "Apply the invariant of Origin-Context Confusion to non-traditional web contexts (such as WebSocket handshakes, GraphQL endpoints, or API gateways) and design minimal safe verification experiments.",
+      "success_criteria": "Learner demonstrates conceptual transfer by identifying ambient authority in protocol upgrade handshakes while establishing strict stop conditions to prevent unauthorized state mutations."
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "scenario.csrf.cswsh-trading-terminal",
+      "title": "Cross-Site WebSocket Hijacking (CSWSH) in a Real-Time Trading Terminal",
+      "context_domain": "FinTech / Real-Time Financial Trading Architecture",
+      "prompt": {
+        "setup": "A financial brokerage platform provides a real-time order execution terminal at https://trade.apex-markets.com/terminal. When an authenticated trader loads the page, client-side JavaScript establishes a WebSocket connection to wss://trade.apex-markets.com/ws/orders. The browser attaches the trader's ambient session cookie (session_id) during the initial HTTP 101 Switching Protocols upgrade request. The session cookie is configured as 'SameSite=None; Secure' because the firm previously embedded chart widgets on affiliate marketing domains. Once connected, the WebSocket channel accepts JSON-formatted trading instructions (e.g., {\"action\":\"SUBMIT_ORDER\",\"pair\":\"ETH/USD\",\"side\":\"BUY\",\"amount\":5.0}). No secondary anti-CSRF token is passed in the WebSocket handshake query parameters or initial frame, and the server application does not inspect the HTTP Origin header.",
+        "task_question": "Analyze this architecture: (1) Formulate the security invariant and explain why the Same-Origin Policy does not prevent an external web page from opening this socket. (2) Map the trust boundary transition and ambient credential flow. (3) Formulate three mutually exclusive hypotheses regarding handshake validation. (4) Propose a minimal safe experiment to test exploitability without triggering unauthorized financial trades."
+      },
+      "expected_reasoning": {
+        "invariant_analysis": "The security invariant requires that state-changing operations and authenticated communication channels cannot be initiated without verifying that the request originated from the authentic application interface. The violation condition occurs because the server treats the presence of ambient session cookies during the WebSocket upgrade handshake as proof of authorized user intent, while the WebSocket protocol (RFC 6455) permits cross-origin connections without enforcing the Same-Origin Policy.",
+        "boundary_analysis": "The trust boundary is crossed during the HTTP 101 Upgrade request. An attacker page hosted on https://malicious-trader.com uses new WebSocket('wss://trade.apex-markets.com/ws/orders'). Because the cookie has SameSite=None, the victim's browser automatically attaches Cookie: session_id=XYZ. The target server completes the handshake, establishing a bidirectional, full-duplex communication channel directly between the attacker's script and the authenticated trading engine.",
+        "competing_hypotheses": [
+          "Hypothesis A (Unvalidated Origin): The server does not inspect the Origin header or validate it against an allowlist, allowing cross-origin WebSocket establishment and subsequent bidirectional order manipulation.",
+          "Hypothesis B (Reverse Proxy Origin Filtering): An intermediate reverse proxy (e.g. Cloudflare, AWS ALB, NGINX) inspects the Origin header and drops or terminates upgrade handshakes where Origin != trade.apex-markets.com.",
+          "Hypothesis C (In-Frame Authentication Required): Although the HTTP handshake succeeds, the application layer requires an explicit authentication frame (e.g., an in-memory JWT or ephemeral token) before accepting trade commands."
+        ],
+        "minimal_safe_experiment": "Host a static HTML page on an external test domain that executes new WebSocket('wss://trade.apex-markets.com/ws/orders'). Upon onopen, send a read-only or harmless diagnostic ping frame (e.g. {\"action\":\"PING\"} or {\"action\":\"GET_SERVER_TIME\"}) and log the onmessage event. Stop immediately if connection is established and server responds; under NO circumstances submit BUY/SELL order frames.",
+        "capability_calibration": "The proven primitive is cross-origin full-duplex socket establishment with ambient session credentials. This is significantly more severe than standard CSRF: because WebSockets are bidirectional and not bound by SOP read restrictions once opened, the attacker gains both WRITE (submitting orders) and READ (reading streaming trade executions and portfolio balances) capabilities.",
+        "remaining_uncertainties": "Whether the backend requires secondary trade confirmation signatures (e.g., 2FA/PIN); whether rate limiters disconnect unusual origin patterns; whether order frames require non-ambient transaction nonces."
+      },
+      "scoring_rubric": [
+        {
+          "dimension": "Invariant Identification",
+          "description": "Ability to identify the protected security guarantee and its violation condition across non-HTTP transport.",
+          "levels": {
+            "0": "Fails to identify any invariant; confuses CSRF with XSS or network eavesdropping.",
+            "1": "Mentions that WebSockets are insecure or that trading should be protected.",
+            "2": "Identifies that cross-origin scripts should not be able to connect to private endpoints.",
+            "3": "Explicitly articulates that establishing an authenticated socket channel must verify request origin provenance and user intentionality, not just cookie presence.",
+            "4": "Rigorously formulates the invariant and defines the exact violation condition in terms of RFC 6455 handshake ambient authority and Origin header neglect."
+          }
+        },
+        {
+          "dimension": "Boundary Mapping",
+          "description": "Accuracy in mapping untrusted cross-origin input through the browser confused deputy to the target WebSocket engine.",
+          "levels": {
+            "0": "Does not understand how WebSockets connect or assumes SOP blocks cross-origin sockets.",
+            "1": "Recognizes browser connects to the server but confuses client-side cookies with server-side tokens.",
+            "2": "Traces that evil.com initiates the connection and the browser includes cookies because of SameSite=None.",
+            "3": "Accurately maps the full boundary: external origin -> browser WebSocket API -> HTTP 101 Upgrade with ambient cookies -> target server handshake sink.",
+            "4": "Traces the complete boundary crossing, contrasting SOP read restrictions in HTTP with the bidirectional read/write capabilities unlocked by cross-site WebSocket establishment."
+          }
+        },
+        {
+          "dimension": "Hypothesis Quality",
+          "description": "Formulation of falsifiable, mutually exclusive competing hypotheses regarding server handshake handling.",
+          "levels": {
+            "0": "No hypotheses formulated; assumes immediate total financial theft without testing.",
+            "1": "Single hypothesis stating that the platform is vulnerable to CSRF.",
+            "2": "Proposes two vague hypotheses without clear demarcation of protocol vs application layers.",
+            "3": "Formulates distinct hypotheses distinguishing between missing Origin header checks, proxy-layer filtering, and application-layer frame authentication.",
+            "4": "Proposes a comprehensive, mutually exclusive set of hypotheses isolating transport upgrade, origin inspection, and subsequent socket message authorization."
+          }
+        },
+        {
+          "dimension": "Safe Experiment Selection",
+          "description": "Selection of minimal, non-destructive experiments producing maximum information gain without financial harm.",
+          "levels": {
+            "0": "Proposes sending BUY/SELL market orders or spamming orders to see what executes.",
+            "1": "Proposes copying an exploit script from GitHub without modifying target payloads.",
+            "2": "Proposes connecting a socket but attempts a small trade ($1) to verify execution.",
+            "3": "Designs a non-destructive experiment: connects socket from test origin and observes onopen or sends harmless diagnostic ping.",
+            "4": "Designs a strictly non-destructive diagnostic experiment with explicit stop conditions, testing origin rejection without emitting state-mutating order frames."
+          }
+        },
+        {
+          "dimension": "Capability Calibration",
+          "description": "Strict separation between the demonstrated connection primitive, bidirectional data flow, and hypothetical trade execution.",
+          "levels": {
+            "0": "Equates connecting a WebSocket with immediate total drainage of the user's bank account.",
+            "1": "Confuses standard blind CSRF (write-only) with CSWSH without realizing CSWSH enables reading responses.",
+            "2": "Identifies that messages can be sent, but does not distinguish between connection success and order validation.",
+            "3": "Accurately calibrates that successful handshake provides a bidirectional channel, but trading impact remains subject to frame-level validations.",
+            "4": "Rigorously separates the primitive (cross-origin authenticated WebSocket handshake) from capabilities (bidirectional frame I/O, event eavesdropping) and business impact (unauthorized trade execution)."
+          }
+        },
+        {
+          "dimension": "Uncertainty Recognition",
+          "description": "Identification of unknown architectural factors that require further validation before reaching definitive conclusions.",
+          "levels": {
+            "0": "Expresses complete certainty without empirical observation.",
+            "1": "Vaguely acknowledges that something might not work.",
+            "2": "Mentions that there might be a firewall or antivirus blocking the connection.",
+            "3": "Explicitly details key technical unknowns: Origin header filtering at reverse proxy, in-frame token requirements, and secondary trade confirmation.",
+            "4": "Formulates an exhaustive matrix of open uncertainties with corresponding diagnostic probes for each architectural layer."
+          }
+        }
+      ],
+      "common_learner_errors": [
+        {
+          "error": "Assuming the Same-Origin Policy blocks cross-origin WebSocket connections",
+          "why_it_fails": "RFC 6455 deliberately allows cross-origin WebSocket connections; browsers do not apply SOP to WebSockets. Instead, browsers send an Origin header and leave it to the server to accept or reject the handshake.",
+          "remedial_guidance": "Review concept.same-origin-policy and RFC 6455 §1.3 to understand how transport protocols differ in cross-origin boundaries."
+        },
+        {
+          "error": "Submitting a live trade order payload to confirm the vulnerability during an assessment",
+          "why_it_fails": "Executing a state-changing transaction violates ethical boundaries and engagement scope, potentially causing real financial loss or legal liability.",
+          "remedial_guidance": "Always use harmless diagnostic frames (PING or non-mutating query) to verify authenticated socket communication."
+        },
+        {
+          "error": "Believing HttpOnly cookies prevent Cross-Site WebSocket Hijacking",
+          "why_it_fails": "HttpOnly prevents JavaScript from reading cookies via document.cookie. The browser automatically attaches HttpOnly cookies to the HTTP Upgrade handshake header regardless.",
+          "remedial_guidance": "Study concept.ambient-credentials to understand that HttpOnly is an XSS defense, not a CSRF or CSWSH defense."
+        }
+      ]
+    },
+    {
+      "scenario_id": "scenario.csrf.account-email-flawed-token",
+      "title": "Account Email Update with Flawed Anti-CSRF Token Validation",
+      "context_domain": "SaaS Platform User Settings",
+      "prompt": {
+        "setup": "A SaaS collaboration platform allows users to change their account email address at POST /api/user/email. The form in the UI includes an anti-CSRF token generated server-side. The session cookie is configured as 'SameSite=None; Secure'. During initial testing, you observe that submitting the form with an invalid token returns 403 Forbidden. However, you notice that the API endpoint is written using a generic web framework request handler.",
+        "task_question": "Analyze this endpoint: (1) Formulate three hypotheses regarding how the server validates the anti-CSRF token. (2) Propose safe differential experiments to verify whether token validation can be bypassed."
+      },
+      "expected_reasoning": {
+        "invariant_analysis": "The invariant requires that the server strictly validates a valid, session-tied anti-CSRF token on every state-changing request.",
+        "boundary_analysis": "Attacker origin crafts a cross-origin request targeting /api/user/email, testing if validation assumptions can be broken.",
+        "competing_hypotheses": [
+          "Hypothesis 1 (Token Omission): The server only validates the token IF the token parameter is present in the request; omitting the parameter entirely bypasses validation.",
+          "Hypothesis 2 (Method Switching): The server only enforces token validation on POST requests; switching the HTTP method to GET (e.g. /api/user/email?email=attacker@evil.com) causes the backend to execute the state change without checking the token.",
+          "Hypothesis 3 (Session Disconnect): The server validates that the token is cryptographically valid in its global token pool, but does not verify that the token belongs to the specific user session submitting the request."
+        ],
+        "minimal_safe_experiment": "Using an authorized test account, issue safe differential requests: (a) submit a POST with the csrf_token parameter removed, changing the email to an alias of the tester (test+safe@tester.com); (b) submit a GET request with the same parameter; (c) submit a POST with a token generated by a secondary tester account.",
+        "capability_calibration": "Demonstrating token omission or method switching confirms full form-based CSRF leading to complete account takeover via password reset redirection.",
+        "remaining_uncertainties": "Whether the application sends an email verification link to the old address before committing the change."
+      },
+      "scoring_rubric": [
+        {
+          "dimension": "Invariant Identification",
+          "description": "Formulation of the token validation invariant.",
+          "levels": {
+            "0": "Fails to identify the invariant.",
+            "1": "Mentions that CSRF tokens are present.",
+            "2": "Identifies that tokens must prevent unauthorized form submissions.",
+            "3": "Explains that the token must be origin-bound, unpredictable, and strictly tied to the active session.",
+            "4": "Rigorously defines the mathematical and session-binding guarantees required of the token validation logic."
+          }
+        },
+        {
+          "dimension": "Boundary Mapping",
+          "description": "Mapping the parameter validation layer vs application sink.",
+          "levels": {
+            "0": "Does not map request parameters.",
+            "1": "Notes that the token is sent in the body.",
+            "2": "Maps the token from client form to server validation filter.",
+            "3": "Traces boundary between framework middleware (token check) and application route handler.",
+            "4": "Thoroughly maps framework routing, method dispatching, and session-token binding."
+          }
+        },
+        {
+          "dimension": "Hypothesis Quality",
+          "description": "Formulation of token validation bypass hypotheses.",
+          "levels": {
+            "0": "No hypotheses formulated.",
+            "1": "Hypothesizes guessing the token.",
+            "2": "Proposes one bypass idea (e.g. remove token).",
+            "3": "Proposes distinct hypotheses: omission, method switching, and session mismatch.",
+            "4": "Systematic hypothesis matrix covering omission, method toggle, duplicate token, and cross-session reuse."
+          }
+        },
+        {
+          "dimension": "Safe Experiment Selection",
+          "description": "Designing safe differential tests.",
+          "levels": {
+            "0": "Attempts destructive actions against live users.",
+            "1": "Uses automated scanner without calibration.",
+            "2": "Changes test account email to arbitrary address.",
+            "3": "Uses controlled tester email alias to observe behavior safely.",
+            "4": "Designs paired differential experiments isolating each token validation condition with controlled rollbacks."
+          }
+        },
+        {
+          "dimension": "Capability Calibration",
+          "description": "Separation of token bypass from account takeover.",
+          "levels": {
+            "0": "Equates finding a parameter with full RCE.",
+            "1": "Assumes email change instantly yields account takeover without checking confirmation emails.",
+            "2": "Notes email is updated.",
+            "3": "Calibrates that email change enables account recovery hijack if no confirmation loop exists.",
+            "4": "Precisely bounds the attack chain from token validation defect to account takeover prerequisites."
+          }
+        },
+        {
+          "dimension": "Uncertainty Recognition",
+          "description": "Identifying application logic confirmation steps.",
+          "levels": {
+            "0": "Assumes zero uncertainties.",
+            "1": "Vaguely wonders if it worked.",
+            "2": "Notes confirmation email might be sent.",
+            "3": "Documents key uncertainties: confirmation tokens to old email, re-auth prompt, session invalidation.",
+            "4": "Comprehensive audit matrix of post-mutation lifecycle uncertainties."
+          }
+        }
+      ],
+      "common_learner_errors": [
+        {
+          "error": "Assuming the presence of a CSRF token parameter in HTML proves the endpoint is secure",
+          "why_it_fails": "Many applications render a token field in the HTML form but fail to validate it on the backend, or skip validation when the parameter is omitted or HTTP method is changed to GET.",
+          "remedial_guidance": "Always perform differential testing: verify that requests FAIL when the token is missing, invalid, or tied to another session."
+        },
+        {
+          "error": "Testing CSRF token bypass using an attacker's email on an executive or production user account",
+          "why_it_fails": "Overwriting another user's email disrupts business operations and violates testing scope.",
+          "remedial_guidance": "Always conduct CSRF verification between two dedicated test accounts under your own control."
+        }
+      ]
+    }
+  ]
+}

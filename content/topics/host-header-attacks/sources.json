@@ -1,0 +1,26 @@
+[
+  {
+    "id": "S1",
+    "title": "PortSwigger Web Security Academy — Password reset poisoning",
+    "url": "https://portswigger.net/web-security/host-header/exploiting/password-reset-poisoning",
+    "tier": 2,
+    "claim": "Documents password reset poisoning: an attacker manipulates a vulnerable website into generating a password-reset link pointing to a domain under their control, by controlling the Host header used to construct that link; attributes original documentation of the technique to 2013 research by PortSwigger's Director of Research.",
+    "retrieved_this_pass": true
+  },
+  {
+    "id": "S2",
+    "title": "IETF RFC 9112 — HTTP/1.1",
+    "url": "https://www.rfc-editor.org/rfc/rfc9112",
+    "tier": 1,
+    "claim": "Specifies request-target forms (origin-form, absolute-form, authority-form, asterisk-form); requires that when a request-target is in absolute-form, an origin server MUST ignore any received Host header field and use the request-target's host information instead; requires a client to still send a Host header field even in this case for compatibility with older HTTP/1.0 proxies.",
+    "retrieved_this_pass": true
+  },
+  {
+    "id": "S3",
+    "title": "Django Security Advisory (via FreeBSD portaudit) — Host header poisoning",
+    "url": "https://www.freebsd.org/ports/portaudit/5f326d75-1db9-11e2-bc8f-d0df9acfd7e5.html",
+    "tier": 2,
+    "claim": "Documents that Django's django.http.HttpRequest.get_host() in the affected versions incorrectly handled userinfo-style syntax in the Host header (e.g. 'validsite.com:random@evilsite.com'), allowing an attacker-controlled domain to be accepted and used, particularly by the password-reset mechanism, to generate arbitrary URLs.",
+    "retrieved_this_pass": true
+  }
+]

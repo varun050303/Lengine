@@ -1,0 +1,48 @@
+===============================================================================
+DIAGRAM 1: CSRF ORIGIN-CONTEXT TRUST BOUNDARY
+===============================================================================
+
+      UNTRUSTED ORIGIN                               VICTIM CONTEXT
+     (https://attacker.com)                    (User's Web Browser Runtime)
+ ┌───────────────────────────┐           ┌────────────────────────────────────────┐
+ │                           │           │                                        │
+ │  Attacker Web Page        │           │  Victim Browser Window                 │
+ │  - Malicious HTML/JS      │           │                                        │
+ │  - Hidden <form> or fetch │ 1. Lures  │  - Holds active session cookies for:   │
+ │                           │   victim  │    domain=bank.com, Path=/             │
+ │                           ├──────────►│                                        │
+ │                           │           │  2. Automatically executes script:     │
+ │                           │           │     document.forms[0].submit()         │
+ │                           │           │                                        │
+ └─────────────┬─────────────┘           └───────────────────┬────────────────────┘
+               │                                             │
+               │ Triggers request across origin boundary     │ 3. Dispatches HTTP POST
+               │ (Permitted by Same-Origin Policy for writes)│    Appends Cookie: session_id=XYZ
+               ▼                                             │    (Ambient Credentials attached)
+═════════════════════════════════════════════════════════════╪════════════════════════════
+             ORIGIN-CONTEXT BOUNDARY (Cross-Origin Request)  │
+═════════════════════════════════════════════════════════════╪════════════════════════════
+                                                             │
+                                                             ▼
+                                                ┌─────────────────────────┐
+                                                │ Target Application      │
+                                                │ (https://bank.com)      │
+                                                │                         │
+                                                │ Endpoint:               │
+                                                │ POST /transfer          │
+                                                │                         │
+                                                │ Server Checks:          │
+                                                │ "Is session_id valid?"  │
+                                                │ -> YES (Victim's session│
+                                                │                         │
+                                                │ 4. Executes action:     │
+                                                │    Transfers funds to   │
+                                                │    attacker account!    │
+                                                └─────────────────────────┘
+
+KEY STRUCTURAL PROPERTY:
+The target application evaluates identity (who owns the session cookie) but fails to
+evaluate provenance (what origin initiated the request). The browser's ambient
+credential mechanism acts as a confused deputy, supplying the victim's authority to
+an instruction drafted entirely by the untrusted origin.
+===============================================================================

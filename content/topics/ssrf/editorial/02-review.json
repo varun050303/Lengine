@@ -77,5 +77,7 @@
       "description": "Lists attack surfaces without deducing them from the core concepts (URL parsing, DNS resolution, network boundaries).",
       "recommendation": "Add a transferable reasoning model connecting concept primitives to candidate attack surfaces."
     }
-  ]
+  ],
+  "reviewer_independent": false,
+  "self_review_caveat": "Pass 1 draft and Pass 2 review were produced in the same authoring session without a distinct reviewer identity; confirmation bias on the drafter's own causal claims has not been independently checked."
 }

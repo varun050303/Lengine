@@ -24,7 +24,8 @@
     "SSRF — DNS rebinding bypasses hostname-based validation by changing resolution between check and connect",
     "SSRF — Time-of-check-to-time-of-use (TOCTOU) between DNS validation and HTTP connection",
     "Cache poisoning — DNS cache can be poisoned to redirect resolution",
-    "Subdomain takeover — dangling DNS records pointing to unclaimed resources"
+    "Subdomain takeover — dangling DNS records pointing to unclaimed resources",
+    "SSRF — Attacker-controlled hostnames with A records pointing directly to internal IPs (127.0.0.1, 169.254.169.254) bypass hostname-based allowlists without needing DNS rebinding or TTL manipulation"
   ],
 
   "common_assumptions": [
@@ -52,6 +53,14 @@
       "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
       "tier": 2,
       "claim": "Documents DNS rebinding as a SSRF defense bypass technique and recommends resolving DNS once, validating the IP, then connecting to the resolved IP",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "CWE-918: Server-Side Request Forgery (SSRF)",
+      "url": "https://cwe.mitre.org/data/definitions/918.html",
+      "tier": 2,
+      "claim": "Defines SSRF as a weakness where the web server receives a URL or similar request and retrieves contents without ensuring it is sent to the expected destination",
       "retrieved_this_pass": true
     }
   ]

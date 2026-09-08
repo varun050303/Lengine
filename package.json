@@ -1,0 +1,30 @@
+{
+  "name": "lengine_v1",
+  "version": "1.0.0",
+  "description": "> **The goal is not to teach the learner how to recognize known vulnerabilities.** > > The goal is to teach the learner how to reason from an unfamiliar application toward a vulnerability they have never studied before.",
+  "main": "cli/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node cli/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/varun050303/Lengine.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+
+  "bugs": {
+    "url": "https://github.com/varun050303/Lengine/issues"
+  },
+  "homepage": "https://github.com/varun050303/Lengine#readme",
+  "dependencies": {
+    "@inquirer/prompts": "^8.7.2",
+    "chalk": "^6.0.0",
+    "cli-table3": "^0.6.5",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0"
+  }
+}

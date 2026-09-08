@@ -1,0 +1,25 @@
+{
+  "schema_version": "2.0",
+  "topic_id": "topic.csrf",
+  "arbitration_pass": 3,
+  "arbitrator": "Lead Security Curriculum Architect",
+  "arbitration_date": "2026-09-08",
+  "decision": "approved",
+
+  "resolutions": [
+    {
+      "feedback_item": "Exploitability Logic OR gate coverage",
+      "action_taken": "Incorporated explicit OR conditions in topic.json modeling: SameSite=None form POST, state-changing GET navigation under SameSite=Lax, the Chromium 2-minute Lax-allowing-unsafe window, and sibling domain exploitation."
+    },
+    {
+      "feedback_item": "Assessment Balance",
+      "action_taken": "Provided two comprehensive scenarios in assessment.json: Scenario 1 evaluates Cross-Site WebSocket Hijacking (CSWSH) to test conceptual transfer to non-HTTP protocols, and Scenario 2 evaluates state-changing email updates with flawed token validation."
+    }
+  ],
+
+  "sign_off": {
+    "technical_accuracy": true,
+    "pedagogical_clarity": true,
+    "schema_compliance": true
+  }
+}

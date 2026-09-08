@@ -35,7 +35,7 @@
     },
     {
       "assumption": "Redirects stay within the same scheme.",
-      "why_wrong": "A redirect from http:// to file:// or gopher:// is valid HTTP. Some HTTP clients follow cross-scheme redirects.",
+      "why_wrong": "A redirect can specify any scheme in the Location header, including file:// or gopher://. However, most modern HTTP client libraries (curl 7.86+, Python requests, Java HttpClient, Node fetch) block cross-scheme redirects by default. This technique is primarily relevant for older library versions or custom HTTP clients with permissive redirect policies.",
       "security_implication": "SSRF: Scheme-switching redirects can access local files or interact with non-HTTP services."
     },
     {
@@ -52,6 +52,14 @@
       "url": "https://portswigger.net/web-security/ssrf",
       "tier": 2,
       "claim": "Documents using open redirects on allowed domains to bypass SSRF URL filters",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "OWASP - Server Side Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "tier": 2,
+      "claim": "Documents redirect-based SSRF bypass techniques and recommends disabling automatic HTTP redirects or re-validating the redirect destination before following",
       "retrieved_this_pass": true
     }
   ]

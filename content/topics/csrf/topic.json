@@ -1,0 +1,487 @@
+{
+  "schema_version": "2.0",
+  "content_version": "1.0.0",
+  "topic_id": "topic.csrf",
+  "display_name": "Cross-Site Request Forgery (CSRF)",
+  "status": "approved",
+  "category": "client-side",
+  "aliases": ["CSRF", "Cross-Site Request Forgery", "XSRF", "Session Riding", "Cross-Site WebSockets Hijacking"],
+
+  "prerequisites": [
+    "concept.same-origin-policy",
+    "concept.ambient-credentials",
+    "concept.samesite-cookies"
+  ],
+  "mechanism_family": "mechanism.origin-context-confusion",
+
+  "learning_objectives": [
+    "Deconstruct a state-changing web action into transport method, credential attachment mechanism, and origin verification sink.",
+    "Contrast the Same-Origin Policy's permissive cross-origin write rules against its restrictive read rules to identify why CSRF succeeds.",
+    "Formulate minimal, safe non-destructive experiments to verify whether an endpoint enforces anti-CSRF tokens and SameSite cookie policies.",
+    "Calibrate CSRF exploitability across browser environments, distinguishing between SameSite=None, SameSite=Lax navigations, and 2-minute Lax windows."
+  ],
+
+  "safety_contract": {
+    "authorization_assumption": "Testing must only be conducted against systems, web domains, and account profiles where explicit written authorization has been granted by the application owner.",
+    "scope_constraints": [
+      "Do not trigger state mutations (e.g. email change, password update, fund transfer) against user accounts not owned by the assessment team.",
+      "Conduct all cross-site verification experiments between two dedicated, tester-controlled accounts (e.g., tester-victim and tester-attacker).",
+      "Do not host public CSRF demonstration pages that can be triggered by unauthenticated third parties or internet crawlers."
+    ],
+    "side_effect_risk": "high",
+    "data_exposure_risk": "low",
+    "stop_conditions": [
+      "Halt testing immediately if an action inadvertently mutates production data or affects real customer accounts.",
+      "Do not perform destructive state changes (e.g., account deletion, irreversible balance transfer, administrative permission elevation) during automated verification."
+    ],
+    "safer_alternative": "Target a benign, idempotent, or easily reversible state change (such as updating a cosmetic profile bio or adding a test tag) rather than critical authentication or financial endpoints."
+  },
+
+  "implementation_variance": {
+    "applies_when": [
+      "The application relies on ambient credentials (session cookies, HTTP Basic/Digest authentication, or TLS client certificates) to identify authenticated users.",
+      "The target endpoint executes a state-changing operation (data mutation, transaction, account configuration change) upon receiving an HTTP request.",
+      "The endpoint lacks an unpredictable, origin-bound proof of user intent (anti-CSRF token) or does not validate it correctly."
+    ],
+    "does_not_apply_when": [
+      "The application uses an explicit, non-ambient authorization mechanism (such as an 'Authorization: Bearer <token>' header stored in JavaScript memory or Web Storage) that the browser never attaches automatically to cross-site requests.",
+      "All session cookies are configured with 'SameSite=Strict', preventing the browser from attaching them to any cross-site request, including top-level navigations.",
+      "The endpoint is strictly read-only and idempotent (RFC 7231 safe methods) with no state-changing side-effects.",
+      "The server enforces strict Fetch Metadata policies (Sec-Fetch-Site: same-origin) across all incoming requests before processing business logic."
+    ],
+    "variance_notes": [
+      "In modern Chromium browsers (Chrome, Edge, Brave), cookies that omit the SameSite attribute default to 'SameSite=Lax'. Cross-site form POST requests omit these cookies, mitigating traditional form CSRF unless the cookie was set within the past 120 seconds ('Lax-allowing-unsafe' window).",
+      "Safari and Firefox enforce strict Lax or intelligent tracking prevention boundaries that may drop cross-site cookies regardless of explicit flags in third-party contexts.",
+      "Mobile web applications embedded within native WebViews (Android WebView, iOS WKWebView) may lack default SameSite=Lax enforcement unless explicitly configured by the mobile developer.",
+      "Endpoints performing state mutations on HTTP GET remain vulnerable across all browsers even under SameSite=Lax, because top-level GET navigations always transmit Lax cookies."
+    ]
+  },
+
+  "mental_model": {
+    "one_sentence": "CSRF occurs when a web application executes a state-changing action based solely on ambient session credentials, allowing an untrusted external website to trick the user's browser into submitting an unauthorized request on the user's behalf.",
+    "short_explanation": "When you visit a website, your browser saves your login session in cookies. By design, whenever your browser sends a request to that website, it automatically includes those cookies—this is 'ambient authority'. An attacker hosts a malicious web page that quietly sends a request to your bank or email provider. Because the Same-Origin Policy permits cross-origin request dispatch, your browser sends the request along with your real login cookies. The destination server sees your valid cookies and assumes you intended to perform the action, executing the attacker's commands using your privileges.",
+    "diagram": "Attacker Web Page (evil.com)\n   │\n   │ 1. Coerces request dispatch (<form>, fetch)\n   ▼\nVictim's Browser Engine (Confused Deputy)\n   │\n   │ 2. Automatically attaches Cookie: session=xyz\n   ▼\nVulnerable Target Application (bank.com)\n   │\n   │ 3. Validates session cookie, omits origin validation\n   ▼\nState Mutation Executed (Transfer funds / change email)",
+    "analogy": {
+      "text": "A company courier wears an official badge that automatically unlocks the security doors at the corporate headquarters. An imposter hands the courier a sealed envelope stamped with legitimate internal markings, asking the courier to hand it to the wire transfer desk. When the courier arrives, the security guards recognize the courier's official badge, let the courier through, and the wire desk processes the transfer order in the envelope—without checking whether the corporate account holder actually drafted it.",
+      "where_it_breaks": "In the physical world, a human teller can inspect the courier, notice strange behavior, or demand an interactive signature. In the browser runtime, the HTTP client attaches the identical binary cookie string without any human hesitation, and standard HTTP requests carry no visual indicator of coercion unless the application explicitly validates cryptographic nonces or modern Fetch Metadata headers."
+    }
+  },
+
+  "invariant": {
+    "statement": "A state-changing action must not be executed without verifying that the request was intentionally initiated by the user within the authentic application context.",
+    "why_it_matters": "Ambient credentials (session cookies) identify WHO the user is, but they do NOT prove WHAT CONTEXT generated the request. Without verifying request intentionality and origin provenance, any untrusted website visited by the user can commandeer the user's authenticated session, performing unauthorized financial transfers, password resets, account takeovers, and configuration changes.",
+    "violation_condition": "An endpoint executes a state mutation upon receiving an HTTP request that carries valid ambient credentials, but lacks verification of an unpredictable, unforgeable origin-bound token or trusted origin metadata header.",
+    "investigation_question": "Can an external origin cause the authenticated victim's browser to submit a request to this endpoint that successfully mutates server-side state, without the external origin knowing or guessing an unforgeable secret?"
+  },
+
+  "normal_behavior": {
+    "description": "The user interacts with the authentic application interface (e.g. loads https://app.example.com/settings). The application renders an HTML form or client-side component containing a unique, cryptographically random anti-CSRF token tied to the user's active session. When the user deliberately clicks 'Save Changes', the browser dispatches a same-origin POST request containing both the ambient session cookie and the anti-CSRF token. The server validates both the session cookie and the anti-CSRF token before applying the changes.",
+    "diagram": "User Interface (app.example.com) → Deliberate form submission → Dispatches POST with Cookie AND anti-CSRF token → Server verifies both → State mutation succeeds"
+  },
+
+  "vulnerable_behavior": {
+    "description": "The target endpoint accepts state-changing requests relying exclusively on ambient cookies for authorization, without requiring or verifying an unforgeable anti-CSRF token. An attacker tricks the victim into visiting a malicious site (https://evil.com). The attacker's page automatically submits a hidden form or issues a request targeting the vulnerable endpoint. The victim's browser automatically appends the victim's session cookies. The server validates the session cookie and applies the state mutation, unaware that the request was initiated by evil.com.",
+    "diagram": "Victim visits evil.com → Script auto-submits hidden form targeting app.example.com → Browser appends ambient session cookie → Target server sees valid session → State mutation executes without user consent"
+  },
+
+  "causal_mechanism": {
+    "steps": [
+      "1. The victim establishes an authenticated session with the target application, which sets an ambient session cookie in the browser's cookie jar.",
+      "2. The victim, while keeping the session active, navigates to an attacker-controlled web page (e.g. via phishing, malicious advertisement, or compromised forum).",
+      "3. The attacker's page executes client-side code that initiates an HTTP request targeting a sensitive, state-changing endpoint on the target application.",
+      "4. The victim's browser processes the outbound request. Because the request destination matches the target application's domain, the browser automatically attaches the matching session cookies (ambient credentials).",
+      "5. The target application receives the request, parses the Cookie header, locates the valid session, and executes the requested state change.",
+      "6. The response is returned to the browser. Even though the Same-Origin Policy prevents the attacker's script on evil.com from reading the response body, the server-side state change is already committed."
+    ],
+    "data_flow": {
+      "source": "Attacker-controlled HTML page or script specifying operation parameters (e.g., new_email=attacker@evil.com)",
+      "transformations": [
+        "Browser DOM parsing of form or fetch() call",
+        "Cookie jar lookup matching destination domain and path",
+        "Ambient credential injection into HTTP Cookie header",
+        "Transport across network to target server"
+      ],
+      "parser_or_component": "Target web server HTTP routing and session middleware",
+      "sink_or_decision": "Application business logic endpoint executing database mutations or account updates",
+      "result": "State mutation executed under victim's identity without victim intent"
+    },
+    "trust_transformation": {
+      "attacker_data": "Arbitrary parameter values for a state-changing action (recipient, amount, email address)",
+      "parser_or_interpreter": "Victim's web browser HTTP engine + Target web application session validator",
+      "new_meaning": "An authenticated, authorized instruction issued by the legitimate account owner",
+      "authority_gained": "Victim's personal account authority and application permissions",
+      "effect": "Execution of privileged transactions without victim knowledge or consent"
+    }
+  },
+
+  "exploitability": {
+    "conditions": [
+      {
+        "condition": "The target endpoint executes an impactful server-side state mutation (e.g., password change, email update, financial transaction, API key generation).",
+        "how_to_test": "Does submitting the request alter database state, change account credentials, or trigger an external side effect?"
+      },
+      {
+        "condition": "The target application relies on ambient credentials (session cookies, Basic auth, or TLS client certificates) for authorization.",
+        "how_to_test": "Can the request be authorized using only automatically transmitted headers, without requiring an explicit Bearer token in the Authorization header?"
+      },
+      {
+        "condition": "The request does not require or validate an unpredictable, unforgeable value (anti-CSRF token).",
+        "how_to_test": "Can the request succeed when the anti-CSRF token parameter is omitted, submitted empty, or replaced with an arbitrary value?"
+      },
+      {
+        "operator": "OR",
+        "label": "Cross-Origin Transport Pathway Available",
+        "conditions": [
+          {
+            "condition": "The session cookie explicitly declares 'SameSite=None', allowing cross-site form POST and subresource requests.",
+            "how_to_test": "Inspect the Set-Cookie response header in browser developer tools: does it contain 'SameSite=None'?"
+          },
+          {
+            "condition": "The state-changing endpoint accepts HTTP GET requests (or supports HTTP method switching from POST to GET), permitting exploitation via top-level navigations under SameSite=Lax.",
+            "how_to_test": "Convert the POST request to a GET request with query parameters: does the server execute the state change?"
+          },
+          {
+            "condition": "The client environment is a legacy browser (lacking Lax-by-default) OR the request exploits the Chromium 2-minute Lax-allowing-unsafe POST window.",
+            "how_to_test": "Does the request succeed in target client environments lacking modern SameSite defaults or within 120 seconds of user login?"
+          },
+          {
+            "condition": "The attacker controls a sibling subdomain or uses same-site contexts (e.g. *.example.com) to issue requests or manipulate cookies.",
+            "how_to_test": "Can an attacker host content on a same-site subdomain (e.g. user-content.example.com) that bypasses SameSite=Lax boundaries?"
+          }
+        ]
+      }
+    ],
+    "gate_rule": "Every AND condition must evaluate to true. In the final group, at least one of the OR conditions must evaluate to true for the endpoint to be exploitable."
+  },
+
+  "investigation": {
+    "attack_surface": [
+      "Account setting update endpoints (email change, password reset, 2FA toggle, phone number update)",
+      "Financial or transactional endpoints (funds transfer, invoice generation, checkout submission)",
+      "Administrative functionality (user creation, role modification, system configuration changes)",
+      "Social and messaging features (posting messages, sending invites, following accounts)",
+      "WebSocket handshake endpoints (HTTP 101 Upgrade requests for interactive full-duplex sockets)",
+      "Login / Logout endpoints (Login CSRF to trap victims in attacker accounts, Logout CSRF to cause denial of service)"
+    ],
+    "hypotheses": [
+      {
+        "id": "H1",
+        "hypothesis": "The endpoint requires a valid anti-CSRF token and strictly validates it against the active server-side session.",
+        "predicted_observation": "Omitting or modifying the anti-CSRF token results in an immediate 403 Forbidden or 400 Bad Request error."
+      },
+      {
+        "id": "H2",
+        "hypothesis": "The endpoint validates the token only when present; omitting the token parameter entirely bypasses validation.",
+        "predicted_observation": "Submitting the form with the csrf_token field removed succeeds with 200 OK and applies the state mutation."
+      },
+      {
+        "id": "H3",
+        "hypothesis": "The endpoint only validates the token on POST requests; switching to GET bypasses token checking.",
+        "predicted_observation": "Sending a GET request to the endpoint URL with query parameters executes the mutation without requiring a token."
+      },
+      {
+        "id": "H4",
+        "hypothesis": "The application relies entirely on SameSite=Lax cookies for CSRF protection and does not use tokens.",
+        "predicted_observation": "Cross-site POST requests fail because cookies are withheld, but top-level GET navigations carry cookies and succeed if the action accepts GET."
+      }
+    ],
+    "minimal_experiments": [
+      {
+        "hypothesis": "The application allows token omission (H2)",
+        "experiment": "Intercept a legitimate state-changing request using an HTTP proxy. Remove the anti-CSRF token parameter from the request body entirely, while keeping the user's session cookie intact. Submit the modified request.",
+        "observation_if_true": "Server returns 200/302 and state is modified → Token validation flaw confirmed (H2).",
+        "observation_if_false": "Server rejects request with 400/403/CSRF error → Token is mandatory; test method switching or session binding.",
+        "information_gain": "Determines whether token validation is strictly enforced or merely optional in the request handler.",
+        "next_experiment": "If blocked, test HTTP method switching (POST -> GET)."
+      },
+      {
+        "hypothesis": "The application allows HTTP method switching (H3)",
+        "experiment": "Send an HTTP GET request to the target endpoint with parameters moved to the URL query string (e.g. GET /settings/email?email=test@example.com).",
+        "observation_if_true": "Server processes the GET request and commits the state mutation → Vulnerable to top-level navigation CSRF (H3).",
+        "observation_if_false": "Server responds with 405 Method Not Allowed or refuses mutation → Endpoint requires POST.",
+        "information_gain": "Identifies whether the endpoint is exploitable via top-level navigations under SameSite=Lax.",
+        "next_experiment": "If method switching is prevented, inspect cookie SameSite flags and test for token session-binding flaws."
+      },
+      {
+        "hypothesis": "The token is not tied to the active user session",
+        "experiment": "Generate a valid anti-CSRF token using Account A. Copy that token and submit it in a state-changing request authenticated with Account B's session cookie.",
+        "observation_if_true": "Request succeeds → Application validates token existence globally but does not tie tokens to specific user sessions.",
+        "observation_if_false": "Request rejected → Token is correctly bound to the authenticated user session.",
+        "information_gain": "Proves whether an attacker can harvest their own valid CSRF token to attack other victims.",
+        "next_experiment": "If bound, verify whether double-submit cookie patterns allow cookie tossing or subdomain injection."
+      }
+    ],
+    "decision_points": [
+      {
+        "question": "Does the request rely on ambient credentials (cookies/Basic auth) rather than explicit Bearer headers?",
+        "yes": "Continue — ambient authority is present.",
+        "no": "Stop. Explicit Authorization headers cannot be forced across origins by the browser."
+      },
+      {
+        "question": "Does the endpoint perform a state-changing action (write/update/delete)?",
+        "yes": "Continue — state mutation creates impact.",
+        "no": "Stop. Read-only endpoints are protected by the Same-Origin Policy from cross-origin data exposure."
+      },
+      {
+        "question": "Is an anti-CSRF token required and strictly validated against the active session?",
+        "yes": "Investigate potential token bypasses (omission, method switching, cross-session reuse, duplicate cookie injection).",
+        "no": "Vulnerable to request forgery if cross-origin transport is possible."
+      },
+      {
+        "question": "Does the cookie policy permit credential transmission (SameSite=None, state-changing GET, or 2-minute Lax window)?",
+        "yes": "Exploitable CSRF confirmed.",
+        "no": "Mitigated by modern browser SameSite policy unless top-level navigation or sibling domain bypass exists."
+      }
+    ]
+  },
+
+  "confirmation": {
+    "what_must_be_proven": [
+      "The state-changing request can be triggered from an external, untrusted origin.",
+      "The victim's browser automatically attaches valid ambient session credentials to the forged request.",
+      "The server processes the request and executes the state change without user interaction or approval.",
+      "The attacker does not need to know or predict unguessable tokens."
+    ],
+    "evidence": [
+      {
+        "strength": "strong",
+        "tier": "observed",
+        "evidence": "A proof-of-concept HTML page hosted on an external domain successfully changes the email or password of a logged-in test user upon visiting the page."
+      },
+      {
+        "strength": "strong",
+        "tier": "observed",
+        "evidence": "Differential proxy logs demonstrating that the endpoint processes state mutations when the CSRF token parameter is omitted or swapped with a different user's token."
+      },
+      {
+        "strength": "moderate",
+        "tier": "inferred",
+        "evidence": "Response headers confirm session cookies lack SameSite attributes or use SameSite=None, and HTML forms lack hidden CSRF token inputs."
+      }
+    ],
+    "safe_confirmation": "Construct an external HTML proof-of-concept form on a local web server (http://localhost:8080 or a private test domain). Target a harmless state change (e.g., updating a user bio or screen name) on a dedicated test account. Verify that loading the external page in a browser where the test account is logged in updates the bio without manual form interaction.",
+    "failed_attempts": [
+      {
+        "attempt": "Submitting a cross-origin XMLHttpRequest or fetch() with JSON body (Content-Type: application/json)",
+        "result": "Browser blocks the request with a CORS error before reaching the application logic.",
+        "why": "Requests with Content-Type: application/json are not 'simple requests' under CORS; the browser automatically issues an OPTIONS preflight request. If the server does not return permissive Access-Control-Allow-Origin headers, the browser aborts the actual request.",
+        "lesson": "Classic CSRF requires simple request content types (application/x-www-form-urlencoded, multipart/form-data, text/plain) unless CORS is misconfigured or WebSockets are used."
+      },
+      {
+        "attempt": "Auto-submitting a standard POST form against a modern browser with default SameSite=Lax",
+        "result": "Request arrives at the server without session cookies; server responds with 401 Unauthorized.",
+        "why": "Modern browsers withhold default Lax cookies on cross-site form POST requests.",
+        "lesson": "Do not assume modern browsers behave like legacy HTTP clients. Verify whether SameSite=None is set, test method switching to GET, or inspect the 120-second Lax-allowing-unsafe window."
+      }
+    ]
+  },
+
+  "capability_and_impact": {
+    "primitive": "Cross-origin HTTP request dispatch carrying ambient session credentials",
+    "capabilities": [
+      {
+        "capability": "Cross-origin request dispatch with cookies",
+        "additional_prerequisite": null,
+        "impact": "Confirms ambient authority transport is active"
+      },
+      {
+        "capability": "Benign state mutation",
+        "additional_prerequisite": "Endpoint lacks effective anti-CSRF token validation",
+        "impact": "Low: Modification of non-sensitive preferences or profile metadata"
+      },
+      {
+        "capability": "Account credential modification (email / password)",
+        "additional_prerequisite": "Endpoint does not require current password confirmation or step-up authentication",
+        "impact": "Critical: Full account takeover by triggering password recovery to attacker's email"
+      },
+      {
+        "capability": "Financial transaction execution",
+        "additional_prerequisite": "Banking or payment endpoint lacks secondary authorization (OTP/PIN/token)",
+        "impact": "Critical: Direct unauthorized transfer of funds or purchase execution"
+      },
+      {
+        "capability": "Administrative privilege grant",
+        "additional_prerequisite": "Victim has administrative privileges and target endpoint modifies user roles",
+        "impact": "Catastrophic: Attacker escalates privileges to full system administrator"
+      }
+    ],
+    "impact_conditions": [
+      "The privileges of the victim user whose session is forged (standard user vs administrator)",
+      "Whether the target application requires re-authentication (current password) for critical changes",
+      "Whether the application sends an out-of-band confirmation (email link) before finalizing state changes",
+      "Whether the session cookie uses SameSite=Strict, SameSite=Lax, or SameSite=None",
+      "Whether the browser environment is a modern desktop browser or an embedded mobile WebView"
+    ]
+  },
+
+  "variants": [
+    {
+      "name": "Form-Based POST CSRF",
+      "condition": "The target endpoint expects a standard HTML form POST submission (application/x-www-form-urlencoded or multipart/form-data) and cookies are sent cross-site (SameSite=None or legacy browser).",
+      "mechanism_detail": "The attacker creates a hidden HTML <form> on their website with input fields pre-populated with attack values. JavaScript automatically submits the form via document.forms[0].submit() when the victim loads the page.",
+      "investigation_difference": "Test whether the endpoint processes standard form submissions without anti-CSRF tokens and whether cookies carry SameSite=None.",
+      "how_to_identify": "Inspect the legitimate form in browser dev tools: check if hidden input fields containing random tokens are absent or static.",
+      "how_to_confirm": "Create a local HTML page with the form and verify that loading the page mutates test account state."
+    },
+    {
+      "name": "State-Changing GET CSRF",
+      "condition": "The application executes a state-changing operation via HTTP GET, or accepts GET requests interchangeably with POST.",
+      "mechanism_detail": "Because browsers treat top-level GET navigations as safe, SameSite=Lax cookies ARE attached. An attacker can trigger the action via a simple <img src='...'>, <script src='...'>, or standard <a> link that redirects the victim.",
+      "investigation_difference": "Must test whether sensitive actions can be invoked via GET query parameters.",
+      "how_to_identify": "Submit the action using GET in an intercepting proxy. If the state changes on the server, the endpoint is vulnerable to GET CSRF.",
+      "how_to_confirm": "Place an <img> tag pointing to the target URL on an external page and verify whether visiting the page triggers the state change."
+    },
+    {
+      "name": "Cross-Site WebSocket Hijacking (CSWSH)",
+      "condition": "A WebSocket endpoint relies on ambient session cookies during the initial HTTP 101 Upgrade handshake without validating the Origin header.",
+      "mechanism_detail": "The attacker's site opens a new WebSocket connection to wss://target.com/ws. The browser includes session cookies in the handshake. Once connected, the attacker has a full-duplex, bidirectional communication channel capable of both writing commands and reading real-time responses.",
+      "investigation_difference": "Assess WebSocket handshake behavior: check if Origin header validation is enforced and whether SameSite=None is set on cookies.",
+      "how_to_identify": "Inspect the WebSocket connection in browser network tools; verify if the Upgrade request uses cookies and lacks origin-bound tokens.",
+      "how_to_confirm": "Use a client script on an external domain to connect to the socket and observe if onopen fires successfully."
+    },
+    {
+      "name": "Login CSRF",
+      "condition": "The login form lacks anti-CSRF protection, allowing an attacker to force the victim's browser to log into the attacker's account.",
+      "mechanism_detail": "The attacker crafts a form that logs the victim into the attacker's account. When the victim subsequently enters sensitive data (such as credit card details, search history, or personal documents), the data is stored in the attacker's account for later retrieval.",
+      "investigation_difference": "Focuses on unauthenticated login endpoints rather than authenticated account settings.",
+      "how_to_identify": "Check whether the login form includes a CSRF token and whether login sessions can be established cross-origin.",
+      "how_to_confirm": "Verify that a cross-origin form submission switches the active browser session to a predetermined attacker account."
+    }
+  ],
+
+  "defense_analysis": [
+    {
+      "defense": "Synchronizer Token Pattern (Anti-CSRF Tokens)",
+      "assumption": "The token is cryptographically random, tied to the user's active session, and cannot be read by an external origin under the Same-Origin Policy.",
+      "what_must_remain_true": "The token must be generated using a CSPRNG, stored server-side in the session or validated cryptographically, required on all mutating requests, and never exposed in URLs (which leak in Referer headers) or cross-origin scripts.",
+      "how_assumption_fails": "Tokens are omitted from validation on HTTP method switch; tokens are not validated when omitted; tokens are pooled globally and not bound to the submitting user's session; or XSS allows the attacker to read the token directly from the DOM.",
+      "investigation": "Test token edge cases: omit the token, send an empty token, send an invalid token, or send a valid token from a different user session."
+    },
+    {
+      "defense": "SameSite Cookie Attribute (Strict / Lax)",
+      "assumption": "The browser enforces RFC 6265bis and withholds session cookies on cross-site dispatches.",
+      "what_must_remain_true": "The user must be using a modern browser; the application must not perform state changes via GET (for Lax); and no sibling subdomains or 2-minute Lax windows can be abused.",
+      "how_assumption_fails": "Sensitive actions accept GET requests (exploitable via Lax top-level navigation); or the application explicitly configures SameSite=None for cross-domain functionality.",
+      "investigation": "Inspect the Set-Cookie headers for SameSite values and test if state-changing endpoints accept GET requests."
+    },
+    {
+      "defense": "Fetch Metadata Request Headers (Sec-Fetch-Site)",
+      "assumption": "The server inspects Sec-Fetch-Site and rejects requests where the value is 'cross-site' for state-changing routes.",
+      "what_must_remain_true": "Browser must support Fetch Metadata; backend middleware must consistently inspect the header before dispatching to business logic.",
+      "how_assumption_fails": "Middleware allows cross-site requests if Sec-Fetch-Site is missing (legacy clients) or fails to apply rules to specific API subpaths.",
+      "investigation": "Strip or manipulate the Sec-Fetch-Site header in an intercepting proxy to test fallback behavior."
+    },
+    {
+      "defense": "Custom Request Headers (e.g. X-Requested-With, X-CSRF-Token)",
+      "assumption": "Browsers cannot send custom headers cross-origin without triggering a CORS preflight that the target server denies.",
+      "what_must_remain_true": "The server must strictly require the header and verify its presence; CORS must not allow arbitrary origins.",
+      "how_assumption_fails": "Server treats the header as optional; or CORS misconfiguration returns Access-Control-Allow-Origin: * with credentials.",
+      "investigation": "Submit the request without the custom header to check if the server processes the payload."
+    }
+  ],
+
+  "transfer": {
+    "shared_mechanism": "Origin-Context Confusion: an untrusted origin coerces a client runtime with ambient credentials into issuing unauthorized instructions to a trusting server sink.",
+    "related_topics": [
+      {
+        "topic": "topic.cors",
+        "shared_principle": "CORS controls cross-origin reading; CSRF exploits cross-origin writing. Misconfigured CORS (e.g. Access-Control-Allow-Origin with credentials) enables full cross-origin CSRF with response readability."
+      },
+      {
+        "topic": "topic.clickjacking",
+        "shared_principle": "Both exploit the authenticated user's session via an attacker-controlled page. Clickjacking tricks the user into physically clicking the authentic UI, bypassing anti-CSRF tokens."
+      },
+      {
+        "topic": "topic.xss",
+        "shared_principle": "XSS executes inside the trusted origin, allowing the attacker to read anti-CSRF tokens directly from the DOM, completely defeating CSRF protections."
+      }
+    ],
+    "transferable_reasoning": "Look for any architecture where: (1) an action performs a state mutation, (2) the server relies on ambient credentials (cookies, client certs, basic auth) to authorize the caller, and (3) the initiation context is not cryptographically validated. This reasoning applies across WebSockets, GraphQL mutations, embedded widgets, and internal web portals.",
+    "new_contexts": [
+      "WebSocket handshakes (CSWSH) establishing full-duplex authenticated connections",
+      "GraphQL mutation endpoints using cookie-based authentication",
+      "Internal router or IoT administration web interfaces accessible via intranet IP",
+      "SaaS webhook integrations triggered via browser navigation",
+      "OAuth 2.0 authorization endpoints lacking state parameter validation (OAuth Login CSRF)",
+      "Mobile native apps handling custom URI schemes from web pages"
+    ]
+  },
+
+  "claims_ref": "claims.json",
+  "assessment_ref": "assessment.json",
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "RFC 6454 - The Web Origin Concept",
+      "url": "https://www.rfc-editor.org/rfc/rfc6454",
+      "tier": 1,
+      "claim": "Defines the web origin concept (scheme, host, port tuple) and the isolation boundaries enforced across origins by user agents.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "MDN Web Docs - Same-origin policy",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy",
+      "tier": 2,
+      "claim": "Details the asymmetry of the Same-Origin Policy: cross-origin writes (form submissions, links) are generally allowed, while cross-origin reads are restricted.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "OWASP - Cross-Site Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "tier": 2,
+      "claim": "Comprehensive guidance on CSRF defense mechanisms including Synchronizer Token Pattern, Double-Submit Cookies, SameSite cookies, and Fetch Metadata.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S4",
+      "title": "RFC 6265bis - Cookies: HTTP State Management Mechanism",
+      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-07#section-5.3.7",
+      "tier": 1,
+      "claim": "Specifies the SameSite cookie attribute (Strict, Lax, None) and defines when cookies are attached or withheld during cross-site requests.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S5",
+      "title": "PortSwigger Web Security Academy - Cross-site request forgery (CSRF)",
+      "url": "https://portswigger.net/web-security/csrf",
+      "tier": 2,
+      "claim": "Details conditions for CSRF, token validation flaws (omission on GET, unvalidated when absent, tie to wrong session), and Cross-Site WebSocket Hijacking (CSWSH).",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S6",
+      "title": "CWE-352: Cross-Site Request Forgery (CSRF)",
+      "url": "https://cwe.mitre.org/data/definitions/352.html",
+      "tier": 2,
+      "claim": "Formal weakness definition: the application does not verify whether a request was intentionally provided by the authenticated user submitting it.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S7",
+      "title": "W3C - Fetch Metadata Request Headers",
+      "url": "https://www.w3.org/TR/fetch-metadata/",
+      "tier": 1,
+      "claim": "Defines Sec-Fetch-Site, Sec-Fetch-Mode, and Sec-Fetch-Dest headers enabling servers to enforce origin isolation policies deterministically.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S8",
+      "title": "RFC 6455 - The WebSocket Protocol",
+      "url": "https://www.rfc-editor.org/rfc/rfc6455",
+      "tier": 1,
+      "claim": "Specifies the WebSocket opening handshake and requires clients to include the Origin header; notes servers must validate Origin to prevent unauthorized cross-origin connections.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S9",
+      "title": "Chromium - SameSite Cookie Changes Projects",
+      "url": "https://www.chromium.org/updates/same-site/",
+      "tier": 2,
+      "claim": "Documents the implementation of SameSite=Lax by default and the 2-minute Lax-allowing-unsafe exception for top-level POST requests.",
+      "retrieved_this_pass": true
+    }
+  ]
+}

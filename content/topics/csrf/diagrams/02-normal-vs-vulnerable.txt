@@ -1,0 +1,70 @@
+===============================================================================
+DIAGRAM 2: NORMAL INTRA-ORIGIN VS VULNERABLE CROSS-ORIGIN EXECUTION
+===============================================================================
+
+-------------------------------------------------------------------------------
+1. NORMAL BEHAVIOR: INTRA-ORIGIN INTENTIONAL INTERACTION
+-------------------------------------------------------------------------------
+
+  User in Browser
+     │
+     │ 1. User loads legitimate banking page: https://bank.com/transfer
+     ▼
+  Bank Frontend DOM (Origin: https://bank.com)
+     │
+     │ 2. User deliberately fills form: recipient="alice", amount="100"
+     │    and clicks "Submit Transfer"
+     ▼
+  Browser Network Engine
+     │
+     │ 3. Dispatches POST /api/transfer
+     │    Origin: https://bank.com
+     │    Cookie: session=xyz
+     │    Sec-Fetch-Site: same-origin
+     │    X-CSRF-Token: <random_cryptographic_nonce_from_DOM>
+     ▼
+  Bank Application Server
+     │
+     │ 4. Verifies:
+     │    - Session cookie is active and valid (Authentication)
+     │    - Request originated from trusted context (Sec-Fetch-Site / CSRF Token)
+     │    - Explicit user intent verified
+     ▼
+  Action executed: Transfer $100 to Alice (Intended state mutation)
+
+
+-------------------------------------------------------------------------------
+2. VULNERABLE BEHAVIOR: CROSS-ORIGIN FORCED EXECUTION (CSRF)
+-------------------------------------------------------------------------------
+
+  Victim (Holding active session for https://bank.com)
+     │
+     │ 1. Visits unrelated external site: https://evil.com/prize
+     ▼
+  Attacker Frontend DOM (Origin: https://evil.com)
+     │
+     │ 2. Page contains hidden auto-submitting form:
+     │    <form action="https://bank.com/api/transfer" method="POST">
+     │       <input type="hidden" name="recipient" value="attacker" />
+     │       <input type="hidden" name="amount" value="5000" />
+     │    </form>
+     │    <script>document.forms[0].submit();</script>
+     ▼
+  Browser Network Engine (Confused Deputy)
+     │
+     │ 3. Browser complies with HTML spec: dispatches POST to https://bank.com
+     │    Origin: https://evil.com (cross-origin)
+     │    Cookie: session=xyz  <-- AUTOMATICALLY APPENDED AMBIENT CREDENTIAL!
+     │    NO unpredictable CSRF token present!
+     ▼
+  Vulnerable Application Server
+     │
+     │ 4. Server examines incoming request:
+     │    - Checks Cookie: session=xyz -> Found! Valid session belonging to Victim!
+     │    - Ignores Origin / Referer header (or doesn't inspect them)
+     │    - Checks for CSRF token -> None required or validated!
+     │    - Conflates session validity with request legitimacy
+     ▼
+  Action executed: Transfer $5,000 to Attacker (Unintended state mutation!)
+
+===============================================================================

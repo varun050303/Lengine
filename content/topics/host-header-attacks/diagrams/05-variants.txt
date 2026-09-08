@@ -1,0 +1,20 @@
+THREE VARIANTS OF THE SAME MECHANISM
+=======================================
+
+1) DIRECT HOST TRUST
+   Host header --------------> URL generation (no proxy involved)
+
+2) FORWARDING-HEADER BYPASS
+   Host header ----[validated, blocked]
+   X-Forwarded-Host --[NOT validated]--> URL generation
+   (allowlist checks the wrong header; proxy doesn't strip the other one)
+
+3) CACHE-KEY MISMATCH
+   Request A: Host: evil.com --> origin generates poisoned response
+                                       |
+                                       v
+                            [Cache stores response,
+                             cache key does NOT include Host]
+                                       |
+   Request B (different, unmodified) -+--> same cache entry returned
+   from an unrelated visitor               (now poisoned) to them too

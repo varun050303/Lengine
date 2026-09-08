@@ -1,0 +1,17 @@
+{
+  "pass": 3,
+  "topic_id": "topic.host-header-attacks",
+  "arbitration_date": "2026-09-08",
+  "decisions": [
+    {
+      "issue_id": "ISSUE-01",
+      "decision": "modify",
+      "evidence_basis": "expert_judgment",
+      "reason": "mechanism.trust-boundary-confusion's core_principle and minimum_causal_signature are, at the abstract level, general enough to cover this topic. The field that was too narrow is authority_transition, which described only the SSRF/XXE sub-case of the server ACTING on the attacker's behalf against a third-party target. Host header attacks are a genuinely different sub-case: the server PRODUCES OUTPUT that a separate trusting party later acts on. A sibling mechanism was considered and rejected: the minimum_causal_signature is identical between the two cases; only the description of what the component DOES with the untrusted data differs.",
+      "required_change": "Broaden mechanism.trust-boundary-confusion.authority_transition to cover both sub-cases. Add topic.host-header-attacks to members and common_manifestations.",
+      "resolution": "Updated /content/mechanisms/trust-boundary-confusion.json accordingly. This is the first real evidence produced by this project that its mechanism-family model generalizes across genuinely different vulnerability surfaces (network-fetch vs. output-generation), rather than being implicitly SSRF-shaped."
+    }
+  ],
+  "blocking_issues_resolved": true,
+  "notes": "ISSUE-01 is the substantive outcome of choosing this topic second, per contracts.md's mechanism-reuse rationale: it produced a real, documented refinement to a shared mechanism rather than either a rubber-stamped fit or a rejected transfer."
+}

@@ -1,0 +1,252 @@
+{
+  "schema_version": "2.0",
+  "content_version": "1.0.0",
+  "topic_id": "topic.host-header-attacks",
+  "display_name": "HTTP Host Header Attacks",
+  "status": "approved",
+  "category": "advanced",
+  "aliases": ["host header injection", "password reset poisoning", "web cache poisoning via host header"],
+  "prerequisites": ["concept.url-parsing", "concept.network-trust-boundaries"],
+  "mechanism_family": "mechanism.trust-boundary-confusion",
+  "learning_objectives": [
+    "Given an HTTP request/response pair, determine whether the Host header (or a forwarding header such as X-Forwarded-Host) is reflected into a generated absolute URL, a cache key, or a routing decision.",
+    "Given a password-reset or email-notification flow, design a minimal experiment using header manipulation to determine whether the generated link's domain is attacker-controllable.",
+    "Distinguish routing-based Host trust (virtual host dispatch) from output-based Host trust (URL generation, cache keying) as distinct exploitation surfaces that share one underlying mechanism.",
+    "Given a defense that validates the Host header against an allowlist, identify whether a sibling header (X-Forwarded-Host, X-Forwarded-Server) is read by the same code path without the same validation."
+  ],
+  "safety_contract": {
+    "authorization_assumption": "Testing occurs only against a target with explicit written authorization to modify Host, X-Forwarded-Host, and X-Forwarded-Server headers, and to trigger password-reset or notification flows.",
+    "scope_constraints": [
+      "Do not trigger password-reset or notification flows for real user accounts outside an authorized test account.",
+      "Do not deliver crafted links to real third parties outside the authorized test scope.",
+      "Confine cache-poisoning experiments to isolated test paths that will not be served to live traffic."
+    ],
+    "side_effect_risk": "medium",
+    "data_exposure_risk": "medium",
+    "stop_conditions": [
+      "Stop immediately if a reset token or session identifier belonging to a real, non-test user appears in a collaborator server's logs.",
+      "Stop if a cache-poisoning experiment begins affecting responses served to unrelated live traffic rather than an isolated test resource."
+    ],
+    "safer_alternative": "Use a test account you control and an intercepting proxy (e.g. Burp Repeater) rather than triggering flows against arbitrary usernames; use a collaborator/exploit-server domain you own to observe whether the server embeds it, rather than a domain belonging to someone else."
+  },
+  "implementation_variance": {
+    "applies_when": [
+      "The application dynamically builds an absolute URL (email links, canonical link headers, redirect targets, OAuth metadata) from the Host header, X-Forwarded-Host, or X-Forwarded-Server instead of a fixed, server-configured domain.",
+      "The web server or framework uses the Host header to select a virtual host, routing rule, or cache key.",
+      "A caching layer sits in front of the origin and its cache-key computation omits a header that the origin's response actually varies on."
+    ],
+    "does_not_apply_when": [
+      "The origin derives its canonical domain from fixed server-side configuration and never consults the Host header for anything security-relevant.",
+      "The request-target is sent in absolute-form and the origin correctly prioritizes it over the Host header per RFC 9112, with no later fallback path that re-reads the header.",
+      "An edge proxy enforces a strict Host allowlist and rejects or rewrites mismatched Host headers before the request reaches application logic that generates URLs or routes on it."
+    ],
+    "variance_notes": [
+      "Django's get_host() historically mishandled userinfo-style syntax in the Host header (e.g. 'validsite.com:random@evilsite.com'), allowing an attacker-chosen domain into password-reset link generation before this was patched at the framework level.",
+      "Some deployments trust X-Forwarded-Host or X-Forwarded-Server from any client because they assume these headers are only ever set by a trusted upstream proxy — true only if the edge explicitly strips client-supplied values with those names before forwarding.",
+      "RFC 9112 requires an origin server to ignore the Host header when the request-target is in absolute-form; implementations that consult the Host header as a fallback after this precedence rule remain exploitable even in otherwise-compliant HTTP/1.1 stacks."
+    ]
+  },
+  "mental_model": {
+    "one_sentence": "Some applications treat the client-supplied Host header as if it were verified server identity, when it is really just another piece of attacker-controlled input.",
+    "short_explanation": "The Host header tells a server which website the client thinks it is reaching. Some applications use that same header to build absolute URLs (password-reset links), choose a cache key, or make a routing decision, without confirming it matches a server-configured, trusted value. Because the client fully controls this header, an attacker can substitute their own domain, and the server will faithfully embed that value into content or decisions that other trusting parties later act on.",
+    "diagram": "diagrams/01-mental-model.txt",
+    "analogy": {
+      "text": "It is like a hotel forwarding your mail to whatever return address you wrote on the envelope, instead of checking which room you are actually registered in.",
+      "where_it_breaks": "The analogy breaks down because nothing is 'returned' to the attacker directly. The poisoned content is instead delivered to a separate victim or into a shared cache."
+    }
+  },
+  "invariant": {
+    "statement": "A value supplied entirely by the client (Host, X-Forwarded-Host, X-Forwarded-Server) must not be trusted as authoritative for generating security-sensitive output unless it has been validated against a server-controlled allowlist.",
+    "why_it_matters": "Password-reset links, canonical URLs, and cache keys all assume the domain component reflects the application's real, intended origin. If that assumption is false, the server will unknowingly manufacture attacker-influenced content that other trusted parties treat as legitimate.",
+    "violation_condition": "The Host header, or a forwarding header trusted in its place, is reflected unvalidated into a generated absolute URL, a routing decision, or a cache key, with no independent server-side check confirming it matches an expected value.",
+    "investigation_question": "If I change the Host header, or a forwarding header, to a domain I control, does anything the server generates, routes, or caches change to reflect my value?"
+  },
+  "normal_behavior": {
+    "description": "The application either ignores the Host header entirely for anything security-sensitive, deriving its canonical domain from a fixed server-side configuration value, or validates the incoming Host header against a strict allowlist before using it for routing, caching, or URL generation. Requests bearing an unrecognized Host value are rejected or routed to a fixed default vhost that performs no sensitive URL generation.",
+    "diagram": "diagrams/02-normal-vs-vulnerable.txt"
+  },
+  "vulnerable_behavior": {
+    "description": "The application reads the Host header, or a related X-Forwarded-* header, directly from the incoming request and threads it unchecked into an absolute URL that gets emailed, redirected to, or embedded as a canonical link — or uses it to key a shared cache or select a virtual host — without confirming it matches a server-configured expected value."
+  },
+  "causal_mechanism": {
+    "steps": [
+      "The client sends an HTTP request specifying an arbitrary value in the Host header, or a forwarding header such as X-Forwarded-Host.",
+      "The origin server, or a component behind a reverse proxy, reads this header to determine 'which domain this request is for', for use in routing, cache keying, or URL construction.",
+      "Application logic uses this value to build an absolute URL or to select cache/routing behavior, without independently confirming it matches an expected, server-controlled domain.",
+      "The resulting content is delivered to a party other than the attacker: a victim's inbox, or any client requesting the same cached resource.",
+      "The victim's trust in the delivered content converts the attacker's chosen value into a security-relevant action: a password-reset token leaked to an attacker-controlled domain, or a poisoned page served to future visitors."
+    ],
+    "data_flow": {
+      "source": "Client-controlled HTTP request header: Host, X-Forwarded-Host, or X-Forwarded-Server.",
+      "transformations": [
+        "Header value is read by the web server or application framework.",
+        "Value is concatenated or interpolated into an absolute URL string, or used directly as a cache-key or routing key."
+      ],
+      "parser_or_component": "The application framework's URL-generation helper, or the caching/routing layer that keys on the Host header.",
+      "sink_or_decision": "The generated URL is embedded in an outbound email or HTTP response, or a routing/caching decision is made based on the header value.",
+      "result": "An attacker-chosen domain is delivered to a third party as if it were the legitimate application domain, or a cache entry keyed incorrectly serves attacker-influenced content to other visitors."
+    },
+    "trust_transformation": {
+      "attacker_data": "Client-supplied Host, X-Forwarded-Host, or X-Forwarded-Server header value.",
+      "parser_or_interpreter": "The application's URL-construction logic, or the caching/routing layer, which treats the header as equivalent to a server-verified domain.",
+      "new_meaning": "An arbitrary client-supplied string is reinterpreted as 'the trusted domain of this application.'",
+      "authority_gained": "The attacker gains the ability to make the server manufacture and distribute content that appears to originate from, and will be trusted as belonging to, the legitimate application.",
+      "effect": "Sensitive tokens embedded in that content can be redirected to an attacker-controlled domain, or poisoned content can be served from cache to unrelated future visitors."
+    }
+  },
+  "exploitability": {
+    "conditions": [
+      {
+        "condition": "The Host header, or a forwarding header, is reflected into a security-relevant output: URL generation, a cache key, or a routing decision.",
+        "how_to_test": "Change the Host header to a collaborator domain you control and observe whether it appears in a generated link, a cached response, or affects which content is served."
+      },
+      {
+        "operator": "OR",
+        "label": "No independent validation blocks the untrusted value",
+        "conditions": [
+          { "condition": "No server-side allowlist check confirms the Host value matches a known-good domain before it is used." },
+          { "condition": "An allowlist check exists but validates only the 'Host' header, while the vulnerable code path actually reads a different header (e.g. X-Forwarded-Host) that bypasses the check." }
+        ]
+      }
+    ],
+    "gate_rule": "The reflection condition must hold, AND at least one path around validation must exist, for the attack to be exploitable."
+  },
+  "investigation": {
+    "attack_surface": [
+      "Password-reset and account-verification email flows that embed a server-generated link",
+      "Canonical URL, Open Graph, or sitemap generation that echoes the request's Host",
+      "Reverse-proxied deployments where the origin trusts X-Forwarded-Host or X-Forwarded-Server from the client rather than from the proxy",
+      "Caching layers (CDN or reverse-proxy cache) whose cache key does not include a header the origin's response varies on",
+      "Virtual-host routing / SNI-independent dispatch based purely on the Host header"
+    ],
+    "hypotheses": [
+      { "id": "H1", "hypothesis": "The application ignores the Host header entirely for URL generation and uses a fixed server-side domain.", "predicted_observation": "Changing the Host header has no effect on any generated link or canonical URL." },
+      { "id": "H2", "hypothesis": "The application reflects the raw Host header into generated URLs without validation.", "predicted_observation": "Changing the Host header changes the domain in a generated password-reset or notification link." },
+      { "id": "H3", "hypothesis": "The application validates 'Host' but a sibling forwarding header (X-Forwarded-Host) is read unvalidated by the same code path.", "predicted_observation": "Changing 'Host' alone has no effect, but adding X-Forwarded-Host with a collaborator domain changes the generated URL." },
+      { "id": "H4", "hypothesis": "A caching layer, not the origin, is responsible for any observed effect, rather than the origin trusting the header for URL generation.", "predicted_observation": "The effect only appears on subsequent, cached responses to other requests, rather than in the direct response to the crafted request itself." }
+    ],
+    "minimal_experiments": [
+      {
+        "hypothesis": "H2 vs H1",
+        "experiment": "Trigger a password-reset (or similar link-generating) request for a test account you control, once with the normal Host header and once with a collaborator domain substituted in.",
+        "observation_if_true": "The resulting email/notification link's domain matches your collaborator domain.",
+        "observation_if_false": "The link's domain remains the application's real domain regardless of the Host header sent.",
+        "information_gain": "Directly distinguishes whether Host is trusted for URL generation.",
+        "next_experiment": "If false, test H3 by adding X-Forwarded-Host instead of modifying Host."
+      },
+      {
+        "hypothesis": "H3",
+        "experiment": "Repeat the same reset/notification trigger, leaving Host unchanged but adding X-Forwarded-Host (and separately X-Forwarded-Server) set to your collaborator domain.",
+        "observation_if_true": "The generated link's domain reflects the forwarding header even though Host itself was untouched.",
+        "observation_if_false": "Neither forwarding header affects the generated link.",
+        "information_gain": "Reveals whether an allowlist check on 'Host' is being silently bypassed via a sibling header.",
+        "next_experiment": "If both fail, test whether a caching layer rather than the origin is responsible (H4)."
+      },
+      {
+        "hypothesis": "H4",
+        "experiment": "Send a request with a collaborator-domain Host/X-Forwarded-Host to a cacheable path, then send a second, unmodified request for the same resource from a different client/session and inspect its response.",
+        "observation_if_true": "The second, unmodified request receives content influenced by the first (poisoned) request.",
+        "observation_if_false": "The second request is unaffected by the first.",
+        "information_gain": "Confirms whether the vulnerability is a cache-keying gap rather than (or in addition to) direct URL-generation trust."
+      }
+    ],
+    "decision_points": [
+      { "question": "Did the generated link's domain change when Host was modified?", "yes": "Proceed to confirm impact via safe token-capture on your own test account.", "no": "Test whether a forwarding header is trusted instead." },
+      { "question": "Did a forwarding header change the generated link's domain?", "yes": "Document that the allowlist check on 'Host' does not cover this header.", "no": "Test for a cache-keying gap (H4) using a second, unmodified request." }
+    ]
+  },
+  "confirmation": {
+    "what_must_be_proven": [
+      "A client-supplied header value is embedded, unvalidated, into a link or decision that a separate trusting party will act on.",
+      "The delivered content plausibly reaches, or is retrievable by, a trust boundary the attacker does not otherwise control."
+    ],
+    "evidence": [
+      { "strength": "strong", "evidence": "Your own test account's password-reset email arrives with a link pointing to your collaborator domain, and visiting the poisoned link with the leaked token successfully authenticates as that test account.", "tier": "observed" },
+      { "strength": "moderate", "evidence": "The generated link's domain changes to your collaborator domain, but you have not yet demonstrated that the resulting token, once captured, actually authenticates the account.", "tier": "strongly_supported" },
+      { "strength": "weak", "evidence": "A subsequent unmodified request to a cacheable path returns content that appears influenced by an earlier crafted request, but the causal link to the specific header has not been isolated from other variables.", "tier": "plausible" }
+    ],
+    "safe_confirmation": "Confirm the full chain only against a test account you control: capture the reset token delivered to your own collaborator server, then use it against the real application URL to verify it authenticates the test account. Do not attempt this against another person's account."
+  },
+  "capability_and_impact": {
+    "primitive": "The ability to make the server embed an attacker-chosen domain into content it generates or caches, without directly compromising the server itself.",
+    "capabilities": [
+      { "capability": "Redirect a security-sensitive token to an attacker-controlled domain", "additional_prerequisite": "The victim (or an automated system) must actually click the delivered link.", "impact": "Full account takeover of the affected user if the token is single-use and sufficient to complete a password change." },
+      { "capability": "Serve attacker-influenced content from a shared cache to unrelated visitors", "additional_prerequisite": "A caching layer must actually store and later serve the poisoned response to other users.", "impact": "Ranges from defacement to, in severe cases, client-side script execution if reflected unsanitized." },
+      { "capability": "Bypass a Host-based access-control or vhost-routing decision", "additional_prerequisite": "A distinct, differently-configured virtual host or routing rule must exist.", "impact": "Access to functionality intended only for a different, more privileged virtual host." }
+    ],
+    "impact_conditions": [
+      "Whether the leaked token alone is sufficient to complete an account takeover, or whether additional verification is required.",
+      "Whether the caching layer's TTL and scope actually cause the poisoned response to reach other real users before it expires.",
+      "Whether an automated system will visit the poisoned link before the intended human victim, potentially consuming a single-use token harmlessly."
+    ]
+  },
+  "defense_analysis": [
+    {
+      "defense": "Ignore the Host header for URL generation; use a fixed, server-side configured application domain.",
+      "assumption": "The application never legitimately needs to serve multiple base domains from the same codebase/config.",
+      "what_must_remain_true": "No legitimate multi-tenant or multi-domain deployment requires per-request domain selection.",
+      "how_assumption_fails": "Multi-tenant SaaS applications often need to generate links for many customer-specific domains, reintroducing exactly the trust decision this defense was meant to eliminate.",
+      "investigation": "Check whether the deployment is single-domain or multi-tenant; if multi-tenant, this defense alone is insufficient."
+    },
+    {
+      "defense": "Validate the Host header against a strict, server-maintained allowlist before using it for anything security-sensitive.",
+      "assumption": "Every code path that reads a domain for security-sensitive purposes consults the same validated value, and no sibling header bypasses the check.",
+      "what_must_remain_true": "X-Forwarded-Host, X-Forwarded-Server, and any other forwarding header are either stripped at the edge or subjected to the identical allowlist check as Host.",
+      "how_assumption_fails": "A framework or library helper used elsewhere in the codebase may independently read a forwarding header directly, unaware that a separate allowlist check exists for 'Host' only.",
+      "investigation": "Search the codebase for all reads of Host-like headers and confirm each one is gated by the same validation, not just the primary login/URL-generation path."
+    },
+    {
+      "defense": "Prioritize the absolute-form request-target over the Host header, per RFC 9112, and never fall back to the header afterward.",
+      "assumption": "The server implementation correctly and consistently applies this precedence rule everywhere a domain decision is made, including in application-level code.",
+      "what_must_remain_true": "Application code does not independently re-read the raw Host header after the web server has already resolved the authoritative target.",
+      "how_assumption_fails": "Many web frameworks expose the raw Host header directly to application code via a simple accessor regardless of how the request-target was actually formed, reintroducing the trust decision at the application layer.",
+      "investigation": "Confirm whether the specific framework accessor used for 'the current host' reflects the RFC-mandated precedence, or simply returns the raw Host header unconditionally."
+    },
+    {
+      "defense": "Include the effective Host (and any forwarding headers the origin actually consults) in the cache key at the caching layer.",
+      "assumption": "The caching layer's configured cache key matches every header the origin's response content actually varies on.",
+      "what_must_remain_true": "Cache-key configuration is kept in sync whenever the origin's logic that reads Host-like headers changes.",
+      "how_assumption_fails": "Cache-key configuration is often set once at infrastructure-provisioning time and not revisited when application code later starts trusting a new header for URL generation.",
+      "investigation": "Compare the caching layer's configured cache-key headers against every Host-like header actually read by the origin's URL-generation and routing logic."
+    }
+  ],
+  "traps": {
+    "common_misconceptions": [
+      { "misconception": "If the Host header doesn't affect which page loads, the application isn't vulnerable.", "why_wrong": "Routing and URL generation are separate trust decisions. An application can correctly route based on a validated Host while still trusting an unvalidated forwarding header for link generation.", "correct_model": "Test each Host-like header against each security-sensitive use independently — a pass on one does not imply a pass on the others." },
+      { "misconception": "Only the literal 'Host' header matters; forwarding headers are an implementation detail.", "why_wrong": "X-Forwarded-Host and X-Forwarded-Server are conventions, not enforced standards — any application behind a reverse proxy may read them, and many allowlist checks target only 'Host'.", "correct_model": "Enumerate every header the target application might plausibly consult for 'the current domain', not just Host." }
+    ],
+    "false_positives": [
+      { "observation": "Changing the Host header appears to change a link in the response, but the link was already present in static page content unrelated to your request.", "incorrect_conclusion": "The application dynamically reflects the Host header into URL generation.", "why_incorrect": "The observed link may be a coincidental match, a cached artifact, or hardcoded content that happens to resemble the injected value.", "what_to_verify_next": "Use a distinctive, unique collaborator domain so any reflection is unambiguous, and confirm the effect reproduces across fresh, uncached requests." }
+    ],
+    "failed_attempts": [
+      { "attempt": "Sent a password-reset request with a modified Host header and expected the reset link's domain to change immediately.", "result": "The reset link still pointed to the real application domain.", "why": "The application used the request-target's absolute-form or a fixed configuration value rather than the Host header for link generation.", "lesson": "A single negative result on 'Host' does not rule out the mechanism; forwarding headers and cache-keying gaps must be tested as distinct hypotheses." }
+    ]
+  },
+  "variants": [
+    { "name": "Direct Host header trust in URL generation", "condition": "The application reads the Host header directly and uses it, unvalidated, to build absolute URLs.", "mechanism_detail": "No forwarding header or caching layer is involved; the trust failure occurs entirely within the origin's own URL-construction logic.", "investigation_difference": "Simplest case: modifying Host alone is sufficient to test the hypothesis.", "how_to_identify": "Change Host and observe whether any generated absolute URL reflects it.", "how_to_confirm": "Trigger a link-generating flow on a test account and confirm the token/link reaches your collaborator domain." },
+    { "name": "Forwarding-header bypass (X-Forwarded-Host / X-Forwarded-Server)", "condition": "A reverse proxy sits in front of the origin, and the origin trusts a forwarding header the proxy is assumed — but not guaranteed — to control exclusively.", "mechanism_detail": "An allowlist check may validate 'Host' while a separate code path reads X-Forwarded-Host directly.", "investigation_difference": "Requires testing each forwarding header independently, since Host alone may show no effect.", "how_to_identify": "Add X-Forwarded-Host and X-Forwarded-Server headers and check for divergent behavior.", "how_to_confirm": "Confirm the specific header name the vulnerable code path actually reads, then reproduce the effect using only that header." },
+    { "name": "Cache-key mismatch (web cache poisoning via Host)", "condition": "A caching layer's response varies based on a Host-like header, but the cache key does not include that header.", "mechanism_detail": "The poisoned response is stored and later served to a separate, unrelated visitor requesting the same cached path.", "investigation_difference": "Requires a second, independent request to confirm the poisoned entry is actually served to someone else.", "how_to_identify": "Send a request with a modified Host-like header to a cacheable path, then issue an unmodified follow-up request.", "how_to_confirm": "Reproduce reliably across multiple follow-up requests from a genuinely separate network path." }
+  ],
+  "transfer": {
+    "shared_mechanism": "mechanism.trust-boundary-confusion — attacker-controlled input is trusted as authoritative for a security-relevant decision without independent validation.",
+    "related_topics": [
+      { "topic": "topic.ssrf", "shared_principle": "Both rely on a privileged component acting on unvalidated, attacker-supplied data — SSRF via the server's network position performing a fetch, Host header attacks via the server's content-generation or caching authority producing trusted-looking output." },
+      { "topic": "topic.web-cache-poisoning", "shared_principle": "The cache-key-mismatch variant of Host header attacks is a specific instance of the general cache-poisoning pattern." },
+      { "topic": "topic.oauth", "shared_principle": "OAuth redirect_uri validation can suffer an analogous failure when a client-supplied value is trusted without allowlist confirmation." }
+    ],
+    "transferable_reasoning": "Whenever a system reads client-supplied metadata and uses it, without independent validation, to decide 'who am I talking to' or 'what should I generate/serve', the same investigation applies: does the value reach a security-sensitive decision, and is there any code path that reads it before the intended validation?",
+    "new_contexts": [
+      "Multi-tenant SaaS platforms generating tenant-specific links or subdomains from request metadata",
+      "Serverless/edge-function deployments where multiple 'Host-like' signals can disagree",
+      "GraphQL or API gateways that construct absolute URLs in response payloads from request headers",
+      "Single-page applications that trust a server-generated bootstrap value built from the Host header"
+    ]
+  },
+  "claims_ref": "content/topics/host-header-attacks/claims.json",
+  "assessment_ref": "content/topics/host-header-attacks/assessment.json",
+  "sources": [
+    { "id": "S1", "title": "PortSwigger Web Security Academy — Password reset poisoning", "url": "https://portswigger.net/web-security/host-header/exploiting/password-reset-poisoning", "tier": 2, "claim": "Documents password reset poisoning as an attacker manipulating a website into generating a password-reset link pointing to an attacker-controlled domain, by controlling the Host header used to build that link.", "retrieved_this_pass": true },
+    { "id": "S2", "title": "IETF RFC 9112 — HTTP/1.1, Section 3.2.2 (request-target)", "url": "https://www.rfc-editor.org/rfc/rfc9112", "tier": 1, "claim": "Specifies that when a request-target is in absolute-form, an origin server MUST ignore any received Host header field and use the host information from the request-target instead.", "retrieved_this_pass": true },
+    { "id": "S3", "title": "Django Security Advisory — Host header poisoning (django.http.HttpRequest.get_host())", "url": "https://www.freebsd.org/ports/portaudit/5f326d75-1db9-11e2-bc8f-d0df9acfd7e5.html", "tier": 2, "claim": "Documents that Django's Host header parsing in affected versions mishandled userinfo-style syntax, allowing an attacker-controlled domain to be used to generate arbitrary URLs.", "retrieved_this_pass": true }
+  ]
+}

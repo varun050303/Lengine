@@ -1,0 +1,78 @@
+{
+  "schema_version": "2.0",
+  "topic_id": "topic.csrf",
+  "sources": [
+    {
+      "id": "S1",
+      "title": "RFC 6454 - The Web Origin Concept",
+      "url": "https://www.rfc-editor.org/rfc/rfc6454",
+      "tier": 1,
+      "claim": "Defines the web origin concept (scheme, host, port tuple) and the isolation boundaries enforced across origins by user agents.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "MDN Web Docs - Same-origin policy",
+      "url": "https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy",
+      "tier": 2,
+      "claim": "Details the asymmetry of the Same-Origin Policy: cross-origin writes (form submissions, links) are generally allowed, while cross-origin reads are restricted.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "OWASP - Cross-Site Request Forgery Prevention Cheat Sheet",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "tier": 2,
+      "claim": "Comprehensive guidance on CSRF defense mechanisms including Synchronizer Token Pattern, Double-Submit Cookies, SameSite cookies, and Fetch Metadata.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S4",
+      "title": "RFC 6265bis - Cookies: HTTP State Management Mechanism",
+      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-07#section-5.3.7",
+      "tier": 1,
+      "claim": "Specifies the SameSite cookie attribute (Strict, Lax, None) and defines when cookies are attached or withheld during cross-site requests.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S5",
+      "title": "PortSwigger Web Security Academy - Cross-site request forgery (CSRF)",
+      "url": "https://portswigger.net/web-security/csrf",
+      "tier": 2,
+      "claim": "Details conditions for CSRF, token validation flaws (omission on GET, unvalidated when absent, tie to wrong session), and Cross-Site WebSocket Hijacking (CSWSH).",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S6",
+      "title": "CWE-352: Cross-Site Request Forgery (CSRF)",
+      "url": "https://cwe.mitre.org/data/definitions/352.html",
+      "tier": 2,
+      "claim": "Formal weakness definition: the application does not verify whether a request was intentionally provided by the authenticated user submitting it.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S7",
+      "title": "W3C - Fetch Metadata Request Headers",
+      "url": "https://www.w3.org/TR/fetch-metadata/",
+      "tier": 1,
+      "claim": "Defines Sec-Fetch-Site, Sec-Fetch-Mode, and Sec-Fetch-Dest headers enabling servers to enforce origin isolation policies deterministically.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S8",
+      "title": "RFC 6455 - The WebSocket Protocol",
+      "url": "https://www.rfc-editor.org/rfc/rfc6455",
+      "tier": 1,
+      "claim": "Specifies the WebSocket opening handshake and requires clients to include the Origin header; notes servers must validate Origin to prevent unauthorized cross-origin connections.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S9",
+      "title": "Chromium - SameSite Cookie Changes Projects",
+      "url": "https://www.chromium.org/updates/same-site/",
+      "tier": 2,
+      "claim": "Documents the implementation of SameSite=Lax by default and the 2-minute Lax-allowing-unsafe exception for top-level POST requests.",
+      "retrieved_this_pass": true
+    }
+  ]
+}

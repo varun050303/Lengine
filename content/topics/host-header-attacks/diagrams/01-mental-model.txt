@@ -1,0 +1,19 @@
+MENTAL MODEL: Host-Like Headers as Ambient (Unverified) Identity
+==================================================================
+
+  Client Request                     Server-side belief
+  ---------------                     -------------------
+  Host: real-app.com          --->    "This request is for real-app.com"
+  (attacker changes to:)
+  Host: evil-collab.com       --->    "This request is for evil-collab.com"
+                                        (server has no independent way to
+                                         confirm this — it takes the
+                                         client's word for it)
+
+  If that belief then feeds into:
+     - a generated absolute URL (password reset link, canonical link)
+     - a cache key / routing decision
+
+  ...the attacker's chosen domain travels into content or decisions that
+  OTHER, TRUSTING parties (a victim's inbox, a shared cache) will act on
+  — not just into the attacker's own session.

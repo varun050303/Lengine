@@ -17,7 +17,7 @@
     { "topic": "api-testing", "display_name": "API Testing", "category": "server-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "web-cache-deception", "display_name": "Web Cache Deception", "category": "server-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "xss", "display_name": "Cross-Site Scripting", "category": "client-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
-    { "topic": "csrf", "display_name": "Cross-Site Request Forgery", "category": "client-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
+    { "topic": "csrf", "display_name": "Cross-Site Request Forgery", "category": "client-side", "status": "completed", "revision_loop_count": 0, "last_updated": "2026-09-08" },
     { "topic": "cors", "display_name": "CORS", "category": "client-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "clickjacking", "display_name": "Clickjacking", "category": "client-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "dom-based", "display_name": "DOM-Based Vulnerabilities", "category": "client-side", "status": "not_started", "revision_loop_count": 0, "last_updated": null },

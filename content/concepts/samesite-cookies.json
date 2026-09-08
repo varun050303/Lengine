@@ -1,0 +1,74 @@
+{
+  "schema_version": "2.0",
+  "concept_id": "concept.samesite-cookies",
+  "display_name": "SameSite Cookie Policies",
+  "status": "approved",
+
+  "summary": "The cookie attribute defined in RFC 6265bis that controls whether cookies are attached to cross-site requests. By configuring SameSite as Strict, Lax, or None, servers specify the boundary conditions under which ambient cookie authority is withheld or transmitted during cross-site navigations and subresource requests.",
+
+  "bounded_scope": {
+    "covers": "RFC 6265bis SameSite attribute values (Strict, Lax, None), site boundary definition (registrable domain / eTLD+1 plus scheme), top-level navigation exceptions, browser default behaviors (Lax-by-default), and the Chromium 2-minute Lax-allowing-unsafe window.",
+    "delegates": "The strict origin tuple (scheme, host, port) is defined in concept.same-origin-policy; the underlying concept of implicit credential attachment is defined in concept.ambient-credentials; full CSRF mitigation architecture is analyzed in topic.csrf."
+  },
+
+  "learning_objectives": [
+    "Differentiate the transmission rules for SameSite=Strict, SameSite=Lax, and SameSite=None across subresource requests, form submissions, and top-level link navigations.",
+    "Identify security vulnerabilities that persist under SameSite=Lax, including state-changing GET requests, top-level navigations, and client-side redirects."
+  ],
+
+  "mental_model": "SameSite is a gatekeeper installed on the browser's cookie jar. Before attaching a cookie to an outbound request, the browser compares the origin of the current web page (the initiator) with the destination of the request (the target). If they belong to different 'sites' (eTLD+1), SameSite determines whether the cookie is allowed to leave: Strict forbids it entirely, None allows it completely, and Lax allows it only if the user is actively navigating the browser's top-level address bar using a safe (read-only) HTTP method.",
+
+  "mechanism": "SameSite evaluates requests based on the 'site' abstraction—defined as the public suffix plus one label (eTLD+1) along with the URL scheme (Schemeful Same-Site). The three policy levels behave as follows: (1) Strict: The cookie is never sent in cross-site requests under any circumstance, including when the user clicks an ordinary top-level link from an external email, search engine, or website. (2) Lax: The cookie is withheld on all cross-site subresource requests (e.g., <img>, <iframe>, <script>, AJAX/Fetch, and cross-site <form method='POST'>). However, it IS sent when the user performs a top-level navigation that uses a 'safe' HTTP method (GET or HEAD), such as clicking a standard <a> hyperlink or being redirected via 302 GET. (3) None: The cookie is sent on all cross-site requests (subresources and navigations). Modern browsers require the 'Secure' attribute whenever 'SameSite=None' is declared; otherwise, the cookie is rejected. In modern Chromium-based engines, cookies that omit the SameSite attribute default to 'Lax', with a temporary compatibility exception ('Lax + POST' or 'Lax-allowing-unsafe') where cookies created within the past 120 seconds may be sent on top-level POST navigations.",
+
+  "security_relevance": [
+    "CSRF Defense: SameSite=Lax provides automated baseline protection against cross-site form POST attacks without requiring server-side token validation.",
+    "State-Changing GET Vulnerability: Applications that perform sensitive actions via GET requests remain completely exploitable even when SameSite=Lax is active, because top-level GET navigations transmit Lax cookies.",
+    "WebSockets (CSWSH): WebSockets are initiated via an HTTP Upgrade request, which is treated as a cross-site subrequest; SameSite=Lax prevents cookie attachment during cross-site WebSocket handshakes.",
+    "User Experience vs Security: SameSite=Strict breaks user login continuity when following external links (requiring re-authentication), prompting most web applications to deploy SameSite=Lax."
+  ],
+
+  "common_assumptions": [
+    {
+      "assumption": "Modern browsers default to SameSite=Lax, so CSRF is dead and no longer needs defensive engineering.",
+      "why_wrong": "SameSite=Lax still attaches cookies on top-level GET navigations. Any application endpoint performing state changes on GET (or accepting GET for POST actions) remains vulnerable. Furthermore, mobile webviews, legacy embedded browsers, and older desktop clients do not enforce Lax by default.",
+      "security_implication": "Developers drop anti-CSRF token verification on sensitive endpoints, exposing users to trivial GET-based CSRF or mobile webview exploits."
+    },
+    {
+      "assumption": "SameSite uses the same boundary as the Same-Origin Policy.",
+      "why_wrong": "SOP uses the exact tuple (scheme, host, port). SameSite uses 'site' (scheme + eTLD+1). Two subdomains (login.example.com and attacker.example.com) are different origins under SOP, but the same site under SameSite.",
+      "security_implication": "If an attacker compromises or hosts content on a subdomain (e.g., via subdomain takeover or XSS), SameSite does not protect against cross-subdomain requests because both subdomains are same-site."
+    },
+    {
+      "assumption": "SameSite=None is safe if the Secure flag is enabled.",
+      "why_wrong": "SameSite=None; Secure ensures the cookie is transmitted over HTTPS, but explicitly re-enables cross-site cookie transmission, restoring the classic CSRF attack surface entirely.",
+      "security_implication": "Third-party embedded widgets or federated identity systems using SameSite=None are vulnerable to cross-site request forgery unless protected by anti-CSRF tokens."
+    }
+  ],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "RFC 6265bis - Cookies: HTTP State Management Mechanism (draft-ietf-httpbis-rfc6265bis)",
+      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-07#section-5.3.7",
+      "tier": 1,
+      "claim": "Specifies the SameSite cookie attribute, defining the semantic rules and transmission algorithms for Strict, Lax, and None across cross-site and same-site contexts.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "Chromium - SameSite Cookie Changes Projects",
+      "url": "https://www.chromium.org/updates/same-site/",
+      "tier": 2,
+      "claim": "Documents the rollout of SameSite=Lax by default, the requirement for Secure with SameSite=None, and the 2-minute Lax-allowing-unsafe window for top-level POSTs.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "PortSwigger - SameSite cookie vulnerability walkthroughs",
+      "url": "https://portswigger.net/web-security/csrf/samesite-cookies",
+      "tier": 2,
+      "claim": "Demonstrates bypassing SameSite=Lax protections via state-changing GET requests, method override parameters, sibling domain exploitation, and the 2-minute window.",
+      "retrieved_this_pass": true
+    }
+  ]
+}

@@ -42,8 +42,8 @@
     },
     {
       "assumption": "An IP address in a URL unambiguously identifies a network host.",
-      "why_wrong": "IP addresses can be represented in decimal (2130706433), octal (017700000001), hex (0x7f000001), IPv6 (::1), or mixed formats. A blocklist checking for '127.0.0.1' will miss equivalent representations.",
-      "security_implication": "SSRF blocklist bypass via alternative IP representations."
+      "why_wrong": "IP addresses can be represented in decimal (2130706433), octal (017700000001), hex (0x7f000001), IPv6 (::1), or mixed formats. A blocklist checking for '127.0.0.1' will miss equivalent representations. Note: octal notation is supported by glibc (Debian/Ubuntu) but NOT by musl libc (Alpine Linux/Docker), Go's net.ParseIP(), or Python's ipaddress module — effectiveness depends on which resolver the target server uses.",
+      "security_implication": "SSRF blocklist bypass via alternative IP representations. Effectiveness varies by runtime — always test against the target's actual resolver."
     }
   ],
 
@@ -62,6 +62,14 @@
       "url": "https://portswigger.net/web-security/ssrf",
       "tier": 2,
       "claim": "Documents URL parsing inconsistencies exploitable for SSRF filter bypass: '@' for userinfo, '#' for fragment, DNS hierarchy abuse, and double-encoding",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "Orange Tsai - A New Era of SSRF (BlackHat USA 2017)",
+      "url": "https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf",
+      "tier": 4,
+      "claim": "Documents URL parser disagreements across programming languages (Python, PHP, NodeJS, Ruby, Java) enabling SSRF filter bypasses via inconsistent authority decomposition and scheme handling",
       "retrieved_this_pass": true
     }
   ]

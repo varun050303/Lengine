@@ -1,0 +1,62 @@
+{
+  "schema_version": "2.0",
+  "topic_id": "topic.csrf",
+  "claims": [
+    {
+      "claim_id": "claim.csrf.sop-asymmetry",
+      "statement": "The Same-Origin Policy (RFC 6454) restricts cross-origin reading of response data via DOM and XMLHttpRequest/Fetch, but does not block cross-origin writing/sending of requests (such as HTML form submissions, image loads, or script tags), allowing an untrusted origin to dispatch requests to a target application.",
+      "type": "technical_fact",
+      "scope": "All standard web browsers implementing the W3C / WHATWG Same-Origin Policy",
+      "status": "supported",
+      "sources": ["S1", "S2"]
+    },
+    {
+      "claim_id": "claim.csrf.ambient-authority-attachment",
+      "statement": "Browsers automatically attach matching ambient credentials (HTTP cookies, cached HTTP authentication headers, TLS client certificates) to outbound HTTP requests based solely on the target domain, without verifying whether the request was intentionally triggered by the user within the authentic application context.",
+      "type": "causal_claim",
+      "scope": "Default browser HTTP client behavior for requests matching domain and path scoping rules (subject to SameSite constraints)",
+      "status": "supported",
+      "sources": ["S2", "S3"]
+    },
+    {
+      "claim_id": "claim.csrf.samesite-lax-navigation",
+      "statement": "Per RFC 6265bis, SameSite=Lax cookies are withheld on cross-site subresource requests (e.g. cross-origin form POSTs, fetch/XHR, <img>), but are automatically attached to top-level navigations that use safe HTTP methods (GET and HEAD), leaving state-changing GET endpoints vulnerable to cross-site exploitation.",
+      "type": "technical_fact",
+      "scope": "Browsers implementing RFC 6265bis SameSite cookie semantics",
+      "status": "supported",
+      "sources": ["S4", "S5"]
+    },
+    {
+      "claim_id": "claim.csrf.token-unpredictability",
+      "statement": "Anti-CSRF synchronizer tokens protect state-changing endpoints because they are origin-bound and cryptographically unpredictable; under the Same-Origin Policy, an external attacker origin cannot read the token from the victim's DOM or response headers.",
+      "type": "defensive_guarantee",
+      "scope": "Web applications using cryptographically secure pseudorandom number generators (CSPRNG) tied to the user's active session and validated on all mutating requests",
+      "status": "supported",
+      "sources": ["S3", "S6"]
+    },
+    {
+      "claim_id": "claim.csrf.fetch-metadata-isolation",
+      "statement": "Fetch Metadata request headers (Sec-Fetch-Site: cross-site) allow servers to deterministically identify and reject cross-origin request initiation before executing application business logic, neutralizing both GET- and POST-based CSRF without per-form token tracking.",
+      "type": "defensive_guarantee",
+      "scope": "Modern browsers supporting W3C Fetch Metadata Request Headers",
+      "status": "supported",
+      "sources": ["S7"]
+    },
+    {
+      "claim_id": "claim.csrf.cswsh-origin-handshake",
+      "statement": "The WebSocket protocol (RFC 6455) performs an HTTP Upgrade handshake that includes the browser's ambient session cookies and an 'Origin' header, but is not restricted by the Same-Origin Policy; unless the server explicitly validates the Origin header during handshake negotiation, a cross-site attacker can establish a full-duplex authenticated socket session.",
+      "type": "causal_claim",
+      "scope": "WebSocket servers relying on cookie-based authentication without origin validation",
+      "status": "supported",
+      "sources": ["S8", "S5"]
+    },
+    {
+      "claim_id": "claim.csrf.chromium-lax-post-window",
+      "statement": "Chromium-based browsers implement a temporary 'Lax-allowing-unsafe' compatibility window where cookies created without an explicit SameSite attribute are sent on cross-site top-level POST requests if the request occurs within 120 seconds of cookie creation.",
+      "type": "implementation_variance",
+      "scope": "Chromium browsers (Google Chrome, Microsoft Edge, Brave, Opera) running the default SameSite transition policy",
+      "status": "supported",
+      "sources": ["S9"]
+    }
+  ]
+}

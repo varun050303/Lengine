@@ -1,0 +1,24 @@
+CAUSAL MECHANISM: From Header to Delivered Content
+=====================================================
+
+  [Attacker]
+     | sends request with crafted Host / X-Forwarded-Host
+     v
+  [Origin server / component behind reverse proxy]
+     | reads header to decide "which domain is this for"
+     v
+  [URL-generation / cache-key / routing logic]
+     | uses header value directly, no allowlist check
+     v
+  [Generated artifact]
+     | e.g. password-reset link embedded in an email,
+     |      or a cached HTTP response
+     v
+  [Third party — NOT the attacker]
+     | a victim's inbox / a future cache visitor
+     | trusts and acts on the artifact (clicks link / receives cached page)
+     v
+  [Security-relevant outcome]
+       token leaked to attacker-controlled domain
+                  OR
+       poisoned content served to unrelated visitors

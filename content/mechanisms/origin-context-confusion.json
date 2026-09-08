@@ -1,0 +1,73 @@
+{
+  "schema_version": "2.0",
+  "mechanism_id": "mechanism.origin-context-confusion",
+  "display_name": "Origin-Context Confusion",
+  "status": "approved",
+
+  "core_principle": "A server processes a state-changing operation triggered by a client request under the assumption that the request represents the authentic, deliberate intent of the authenticated user within the trusted application interface. However, the request was coerced or synthesized by an untrusted external origin that exploited the client runtime's implicit credential attachment (ambient authority). The system authenticates the user's session identifier but fails to authenticate the request's originating context, conflating who holds the session with what context initiated the action.",
+
+  "minimum_causal_signature": {
+    "components_involved": [
+      "Untrusted Origin / Attacker-Controlled Web Context",
+      "Victim User-Agent (Browser) with Ambient Credentials",
+      "Target Web Application / State-Changing Endpoint"
+    ],
+    "authority_transition": "The attacker-controlled web context dispatches a cross-origin HTTP request to the target server; the victim's browser automatically appends ambient credentials (such as session cookies or HTTP authentication headers) based on destination matching, elevating an unauthorized external payload into an authenticated server instruction.",
+    "security_decision_bypassed": "The target server validates the presence of an active session credential and assumes caller intentionality, bypassing origin provenance verification and treating ambient transport as proof of authorized application interaction.",
+    "failure_condition": "A state-changing operation executes based solely on ambient session credentials without validating an unpredictable, origin-bound proof of intent (anti-CSRF synchronizer token) or enforcing strict cross-origin boundary controls (SameSite=Strict cookies or Sec-Fetch-Site metadata filtering)."
+  },
+
+  "conditions": [
+    "The target application performs a state-changing action based on HTTP requests.",
+    "The target application relies on ambient credentials (session cookies, Basic auth, client TLS) automatically transmitted by the browser.",
+    "The target endpoint lacks an unpredictable, unforgeable value (anti-CSRF token) that an external origin cannot read or predict under the Same-Origin Policy.",
+    "The client's browser policy (SameSite settings) allows ambient credentials to be attached during cross-site dispatch of that specific request type."
+  ],
+
+  "members": ["topic.csrf"],
+
+  "investigation_question": "Can an untrusted external origin cause the victim's browser to submit a request to this endpoint that executes a state change using the victim's ambient session credentials, without requiring the attacker to read the application's response or know secret tokens?",
+
+  "defensive_implication": "Decouple authentication from request authorization. Do not rely exclusively on ambient credentials for state-changing operations. Require an explicit, unpredictable proof of user intent that cannot be generated or read by cross-origin attackers—such as cryptographically strong anti-CSRF synchronizer tokens, SameSite=Strict cookies, or Fetch Metadata request header filtering (Sec-Fetch-Site / Sec-Fetch-Mode). For critical state changes, require re-authentication.",
+
+  "common_manifestations": [
+    "Classic Form-Based CSRF: Malicious web page auto-submits an HTML form targeting a sensitive account setting change.",
+    "State-Changing GET CSRF: Sensitive actions performed via HTTP GET triggered via <img>, <script>, or <a> top-level navigations.",
+    "Cross-Site WebSocket Hijacking (CSWSH): Attacker page opens a WebSocket connection to the target server, using the victim's ambient cookies to establish an authenticated bidirectional channel.",
+    "Login CSRF: Attacker forces the victim's browser to log in to the attacker's account, causing the victim to subsequently submit sensitive personal data or purchase history into the attacker's profile.",
+    "Flash / Silverlight / Java Applet Crossdomain CSRF (historical): Misconfigured crossdomain.xml allowing cross-origin authenticated requests."
+  ],
+
+  "related_concepts": [
+    "concept.same-origin-policy",
+    "concept.ambient-credentials",
+    "concept.samesite-cookies"
+  ],
+
+  "sources": [
+    {
+      "id": "S1",
+      "title": "CWE-352: Cross-Site Request Forgery (CSRF)",
+      "url": "https://cwe.mitre.org/data/definitions/352.html",
+      "tier": 2,
+      "claim": "Defines CSRF as an attack where the web application does not, or cannot, sufficiently verify whether a well-formed, valid, consistent request was intentionally provided by the user who submitted the request.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S2",
+      "title": "OWASP - Cross-Site Request Forgery (CSRF)",
+      "url": "https://owasp.org/www-community/attacks/csrf",
+      "tier": 2,
+      "claim": "Explains that CSRF forces an end user to execute unwanted actions on a web application in which they're currently authenticated by abusing ambient browser session state.",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "RFC 6265bis - Section 5.3.7 SameSite Attribute",
+      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-07#section-5.3.7",
+      "tier": 1,
+      "claim": "Defines browser-enforced isolation boundaries for ambient cookie transmission to prevent cross-site request forgery.",
+      "retrieved_this_pass": true
+    }
+  ]
+}

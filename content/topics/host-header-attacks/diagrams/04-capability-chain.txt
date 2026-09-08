@@ -1,0 +1,34 @@
+CAPABILITY CHAIN: Primitive -> Capability -> Impact
+======================================================
+
+  PRIMITIVE
+  Server embeds attacker-chosen domain into generated
+  content / cache entry / routing decision
+        |
+        | + victim actually clicks delivered link
+        v
+  CAPABILITY
+  Password-reset (or similar) token is delivered to an
+  attacker-controlled domain instead of the real app
+        |
+        | + token alone is sufficient to complete a
+        |   password change (no extra verification step)
+        v
+  IMPACT
+  Full account takeover of the affected user
+
+  --- separate branch ---
+  PRIMITIVE (same as above)
+        |
+        | + caching layer stores & later serves the
+        |   poisoned response to OTHER visitors
+        v
+  CAPABILITY
+  Poisoned content served from shared cache
+        |
+        | + poisoned content includes executable/reflected
+        |   content, not just a wrong link
+        v
+  IMPACT
+  Client-side script execution / broad content injection
+  affecting many unrelated users

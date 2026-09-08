@@ -28,9 +28,9 @@
     },
     {
       "claim_id": "claim.ssrf.imdsv2-put-token",
-      "statement": "AWS IMDSv2 requires a PUT request with header 'X-aws-ec2-metadata-token-ttl-seconds' to acquire a session token, thereby neutralizing simple GET-only SSRF primitives lacking custom header control.",
+      "statement": "AWS IMDSv2 requires a PUT request with a custom header to acquire a session token, thereby neutralizing simple GET-only SSRF primitives. Additionally, the default hop limit (TTL=1) on the token request prevents it from crossing a network boundary — so SSRF from inside a container cannot reach the metadata endpoint even if the primitive supports PUT with custom headers.",
       "type": "defensive_guarantee",
-      "scope": "AWS EC2 instances with IMDSv2 configured with token hop limit = 1",
+      "scope": "AWS EC2 instances with IMDSv2 enabled. The hop limit defense specifically applies when the SSRF originates from a container or crosses a network boundary.",
       "status": "supported",
       "sources": ["S5"]
     },
@@ -44,9 +44,9 @@
     },
     {
       "claim_id": "claim.ssrf.alternative-ip-formats",
-      "statement": "POSIX and standard socket libraries resolve alternative IP integer representations (such as dword/decimal 2130706433 or octal 017700000001) to 127.0.0.1, bypassing naive regex-based IP blocklists.",
+      "statement": "Some socket libraries resolve alternative IP integer representations (such as dword/decimal 2130706433 or octal 017700000001) to 127.0.0.1, bypassing naive regex-based IP blocklists. However, support varies: glibc accepts octal/hex/decimal, but musl libc (Alpine Linux/Docker), Go's net.ParseIP(), and Python's ipaddress module do not.",
       "type": "implementation_variance",
-      "scope": "Standard C library resolvers (glibc, musl) and IPv4 socket implementations",
+      "scope": "glibc-based resolvers (Debian, Ubuntu, RHEL). Does NOT reliably apply to musl-based systems (Alpine Linux), Go standard library, or Python ipaddress module.",
       "status": "supported",
       "sources": ["S2", "S4"]
     }

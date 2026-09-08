@@ -1,0 +1,48 @@
+===============================================================================
+DIAGRAM 6: BREAKING THE CSRF CAUSAL CHAIN (DEFENSIVE ARCHITECTURE)
+===============================================================================
+
+           ATTACK PATH                           DEFENSIVE INTERVENTION
+ ┌──────────────────────────────┐
+ │ 1. Attacker crafts           │
+ │    cross-origin request      │
+ └──────────────┬───────────────┘
+                │
+                ▼
+ ┌──────────────────────────────┐         [DEFENSE 1: SameSite Cookie Policy]
+ │ 2. Browser processes dispatch│ ──────► Configure Set-Cookie: SameSite=Strict (or Lax)
+ │    and inspects cookie jar   │         EFFECT: Browser withholds session cookie on
+ └──────────────┬───────────────┘         cross-origin dispatches. Server sees unauthenticated
+                │                         request -> rejects with 401/403.
+                ▼
+ ┌──────────────────────────────┐         [DEFENSE 2: Fetch Metadata Request Headers]
+ │ 3. Browser emits HTTP request│ ──────► Server inspects 'Sec-Fetch-Site: cross-site'
+ │    headers over network wire │         EFFECT: Server middleware blocks any state-changing
+ └──────────────┬───────────────┘         request with Sec-Fetch-Site != 'same-origin'
+                │                         (or 'same-site') before endpoint execution.
+                ▼
+ ┌──────────────────────────────┐         [DEFENSE 3: Custom Non-Standard Header]
+ │ 4. Request arrives at server │ ──────► Require custom header (e.g. 'X-CSRF-Token: ...')
+ │    endpoint sink             │         EFFECT: Browsers cannot send custom headers cross-
+ └──────────────┬───────────────┘         origin via standard HTML forms. Fetch/XHR requires
+                │                         CORS preflight (OPTIONS), which target origin denies.
+                ▼
+ ┌──────────────────────────────┐         [DEFENSE 4: Synchronizer Token Pattern (STP)]
+ │ 5. Application evaluates     │ ──────► Server validates secret, cryptographically random
+ │    request parameters        │         anti-CSRF token matched to user's active session.
+ └──────────────┬───────────────┘         EFFECT: Attacker cannot read token from target DOM
+                │                         due to SOP; submitted token is absent or invalid
+                │                         -> Server rejects with 403 Forbidden.
+                ▼
+ ┌──────────────────────────────┐         [DEFENSE 5: Step-Up Re-Authentication]
+ │ 6. State mutation executed   │ ──────► Prompt user for current password, OTP, or WebAuthn.
+ │    on backend database       │         EFFECT: Even if request is coerced, mutation fails
+ └──────────────────────────────┘         without interactive secret entry.
+
+===============================================================================
+RECOMMENDED DEFENSE-IN-DEPTH POSTURE:
+Primary Defense: Cryptographically random Anti-CSRF Synchronizer Tokens (or Double-Submit Cookie).
+Secondary Defense: SameSite=Lax (default) or SameSite=Strict on all session cookies.
+Tertiary Defense: Fetch Metadata validation (Sec-Fetch-Site) in global API gateway / middleware.
+High-Risk Operations: Step-up re-authentication (current password / MFA challenge).
+===============================================================================

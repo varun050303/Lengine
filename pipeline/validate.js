@@ -10,8 +10,11 @@
  * - Gate D: Learning Objectives, Safety Contract & Assessment Rubric
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const CONTENT_DIR = path.join(ROOT_DIR, 'content');
@@ -202,6 +205,22 @@ if (manifest && manifest.topics) {
         pass('Gate A (Structural Validity)', `Editorial history verified (01-draft, 02-review.json, 03-arbitration.json)`);
       } else {
         fail('Gate A (Structural Validity)', `Editorial history incomplete in ${editorialDir}`);
+      }
+
+      // Reviewer independence check (contracts.md 4.3)
+      if (reviewExists) {
+        try {
+          const reviewData = JSON.parse(fs.readFileSync(path.join(editorialDir, '02-review.json'), 'utf8'));
+          if (reviewData.reviewer_independent === true) {
+            pass('Gate D (Learning & Safety)', `Pass 2 review declares reviewer independence`);
+          } else if (reviewData.reviewer_independent === false && reviewData.self_review_caveat) {
+            warn('Gate D (Learning & Safety)', `Pass 2 review is self-reviewed (not independent): ${reviewData.self_review_caveat}`);
+          } else {
+            warn('Gate D (Learning & Safety)', `Pass 2 review missing reviewer_independent declaration (contracts.md 4.3)`);
+          }
+        } catch (e) {
+          warn('Gate A (Structural Validity)', `Could not parse 02-review.json for independence check: ${e.message}`);
+        }
       }
     } else {
       fail('Gate A (Structural Validity)', `Missing editorial/ directory for topic`);

@@ -1,0 +1,60 @@
+{
+  "schema_version": "2.0",
+  "topic_id": "topic.host-header-attacks",
+  "claims": [
+    {
+      "claim_id": "claim.host-header-attacks.absolute-form-precedence",
+      "statement": "When a request-target is sent in absolute-form, an origin server MUST ignore any received Host header field and instead use the host information from the request-target.",
+      "type": "technical_fact",
+      "scope": "HTTP/1.1 as specified by RFC 9112; applies to compliant origin servers and proxies processing absolute-form request-targets.",
+      "status": "supported",
+      "sources": ["S2"],
+      "last_verified": "2026-09-08"
+    },
+    {
+      "claim_id": "claim.host-header-attacks.password-reset-poisoning-mechanism",
+      "statement": "An attacker can cause a website to generate a password-reset link pointing to an attacker-controlled domain by manipulating the Host header used to construct that link, then capture the reset token when the victim (or an automated system) follows the link.",
+      "type": "causal_claim",
+      "scope": "Applications that dynamically construct absolute URLs for password-reset or notification emails from the Host header (or a trusted forwarding header) without independent server-side validation.",
+      "status": "supported",
+      "sources": ["S1"],
+      "last_verified": "2026-09-08"
+    },
+    {
+      "claim_id": "claim.host-header-attacks.forwarding-header-bypass",
+      "statement": "An application may validate the literal 'Host' header against an allowlist while a separate code path reads a forwarding header (X-Forwarded-Host or X-Forwarded-Server) unvalidated, allowing the allowlist to be bypassed via the sibling header.",
+      "type": "implementation_variance",
+      "scope": "Deployments behind a reverse proxy where the proxy does not strip or overwrite client-supplied X-Forwarded-* headers before forwarding, and application code independently consults these headers.",
+      "status": "derived",
+      "sources": ["S1"],
+      "last_verified": "2026-09-08"
+    },
+    {
+      "claim_id": "claim.host-header-attacks.django-userinfo-parsing",
+      "statement": "Django's Host header parsing (django.http.HttpRequest.get_host()) in the affected versions incorrectly handled userinfo-style syntax in the Host header (e.g. 'validsite.com:random@evilsite.com'), allowing an attacker-controlled domain to be accepted and used to generate password-reset URLs.",
+      "type": "implementation_variance",
+      "scope": "Django versions affected by this historical parsing defect, prior to the corresponding framework-level fix; illustrative of a broader class of Host-parsing implementation bugs rather than a claim about current Django behavior.",
+      "status": "supported",
+      "sources": ["S3"],
+      "last_verified": "2026-09-08"
+    },
+    {
+      "claim_id": "claim.host-header-attacks.cache-key-mismatch",
+      "statement": "If a caching layer's response content varies based on a Host-like header but the cache key does not include that header, a request bearing a manipulated header value can cause a poisoned response to be stored and later served to unrelated visitors requesting the same cached path.",
+      "type": "causal_claim",
+      "scope": "Caching layers (CDN or reverse-proxy cache) placed in front of an origin whose response construction reads a Host-like header that is excluded from the configured cache key.",
+      "status": "derived",
+      "sources": ["S1"],
+      "last_verified": "2026-09-08"
+    },
+    {
+      "claim_id": "claim.host-header-attacks.client-must-send-host",
+      "statement": "A client MUST send a Host header field in an HTTP/1.1 request even when the request-target is in absolute-form, to preserve compatibility with older HTTP/1.0 proxies that may not process absolute-form targets.",
+      "type": "technical_fact",
+      "scope": "HTTP/1.1 as specified by RFC 9112.",
+      "status": "supported",
+      "sources": ["S2"],
+      "last_verified": "2026-09-08"
+    }
+  ]
+}

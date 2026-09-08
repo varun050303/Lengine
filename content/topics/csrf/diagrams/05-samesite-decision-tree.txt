@@ -1,0 +1,74 @@
+===============================================================================
+DIAGRAM 5: SAMESITE COOKIE TRANSMISSION DECISION TREE
+===============================================================================
+
+           Outbound HTTP Request Dispatched from Browser Page
+                                │
+                                ▼
+               Is Request Origin Same-Site as Target?
+               (Scheme + Registrable Domain eTLD+1 Match)
+                                │
+               ┌────────────────┴────────────────┐
+              YES                                NO (Cross-Site)
+               │                                 │
+               ▼                                 ▼
+      [Attach All Cookies]               Inspect Cookie's
+      (Strict, Lax, None)               SameSite Attribute
+                                                 │
+          ┌──────────────────────────────────────┼────────────────────────┐
+          │                                      │                        │
+          ▼                                      ▼                        ▼
+     SameSite=Strict                       SameSite=None             SameSite=Lax
+          │                                      │                   (or Unset Default)
+          ▼                                      │                        │
+   [WITHHOLD COOKIE]               Does Cookie have Secure Flag?          │
+   Cookie is NEVER sent             (and transmitted over HTTPS)?         │
+   in cross-site context.                        │                        │
+   (Blocks ALL CSRF, but                 ┌───────┴───────┐                │
+   breaks external links)               YES              NO               │
+                                         │                │               │
+                                         ▼                ▼               │
+                                 [ATTACH COOKIE]    [REJECT COOKIE]       │
+                                 Cookie sent on all  Browser rejects      │
+                                 cross-site requests cookie entirely      │
+                                 (Vulnerable to      (RFC 6265bis)        │
+                                 standard CSRF!)                          │
+                                                                          │
+          ┌───────────────────────────────────────────────────────────────┘
+          │
+          ▼
+   Is this a Top-Level Navigation?
+   (Window location change, <a> click, 302 redirect changing address bar)
+          │
+      ┌───┴───┐
+     YES      NO (Subresource: <img>, <iframe>, fetch(), XHR, background form)
+      │        │
+      │        ▼
+      │   [WITHHOLD COOKIE]
+      │   Cookie NOT sent on cross-site subrequests.
+      │   (Protects background fetch/POST requests)
+      │
+      ▼
+   Is HTTP Method "Safe" per RFC 7231 (GET or HEAD)?
+      │
+      ├─── YES ──► [ATTACH COOKIE]
+      │            Cookie transmitted! (Exploitable if state mutation on GET!)
+      │
+      └─── NO (POST / PUT / DELETE)
+            │
+            ▼
+         Does Chromium 2-Minute Window Apply?
+         (Cookie created without SameSite attribute < 120 seconds ago)
+            │
+         ┌──┴──┐
+        YES    NO
+         │      │
+         │      ▼
+         │   [WITHHOLD COOKIE]
+         │   Cookie NOT attached on cross-site top-level POST.
+         │
+         ▼
+      [ATTACH COOKIE] (Lax-allowing-unsafe exception in Chromium)
+      Cross-site POST carries cookie if within 2 minutes of login!
+
+===============================================================================

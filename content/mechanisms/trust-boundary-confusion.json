@@ -4,17 +4,21 @@
   "display_name": "Trust-Boundary Confusion",
   "status": "approved",
 
-  "core_principle": "Attacker-controlled input causes a privileged component to act on the attacker's behalf, crossing a trust boundary that should separate the attacker from the privileged capability. The component has authority the attacker lacks — network position, file system access, credentials, or elevated permissions. The attacker does not gain the component's identity; they gain the component's capability by controlling its actions.",
+  "core_principle": "Attacker-controlled input causes a privileged component to act on the attacker's behalf, crossing a trust boundary that should separate the attacker from the privileged capability. The component has authority the attacker lacks — network position, file system access, credentials, elevated permissions, or the ability to produce output that other parties treat as authoritative. The attacker does not gain the component's identity; they gain the component's capability by controlling either what it does or what it produces.",
 
   "minimum_causal_signature": {
     "components_involved": [
       "Untrusted Caller / External Actor",
       "Privileged Server / Dispatcher",
-      "Protected Resource / Internal Subsystem"
+      "Protected Resource / Internal Subsystem, OR a downstream trusting party who consumes the component's output"
     ],
-    "authority_transition": "Attacker supplies data specifying an operation or destination; the privileged component executes the operation using its own ambient authority (network position, local socket, or IAM role), granting privileged execution to untrusted intent.",
-    "security_decision_bypassed": "The protected destination relies on ambient positional trust (evaluating caller source address or caller process identity) rather than authenticating the initiator of the request.",
-    "failure_condition": "Attacker-controlled data determines the target or operation of a privileged sink without strict allowlist validation, enabling the server's ambient authority to be exerted on arbitrary targets."
+    "authority_transition": {
+      "case_a_privileged_execution": "Attacker supplies a destination, command, or resource path; the privileged component executes the operation using its own ambient authority (network position, local socket, or IAM role), granting privileged execution to untrusted intent.",
+      "case_b_trusted_output": "Attacker supplies output-shaping metadata; the privileged component embeds the untrusted value into generated content, cache keys, or routing decisions that a separate trusting party later consumes as if it were authoritative.",
+      "shared_failure": "In both cases the component treats attacker-supplied data as if it carried the authority of a validated source."
+    },
+    "security_decision_bypassed": "The protected destination or output relies on ambient positional trust (evaluating caller source address, caller process identity, or raw request metadata) rather than authenticating or validating the initiator's data against a known-good source.",
+    "failure_condition": "Attacker-controlled data determines the target, operation, or embedded content of a privileged sink without strict allowlist validation, enabling the server's ambient authority — or its output's assumed trustworthiness — to be exerted on, or extended to, arbitrary attacker-chosen values."
   },
 
   "conditions": [

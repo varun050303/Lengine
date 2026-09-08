@@ -1,0 +1,56 @@
+===============================================================================
+DIAGRAM 3: DATA FLOW & CAUSAL CHAIN IN CSRF
+===============================================================================
+
+ [Attacker Intent]
+        │
+        │ Synthesizes malicious action parameters (e.g. email="hacker@evil.com")
+        ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Step 1: Payload Staging                                │
+ │ Host malicious web page on attacker-controlled domain  │
+ │ with automated trigger (<form>, <img>, <iframe>, fetch)│
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             │ Victim loads evil.com
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Step 2: Browser Execution (Client-Side)               │
+ │ Script or DOM parser on evil.com initiates request     │
+ │ targeting vulnerable endpoint: https://target.com/edit │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             │ Cross-origin network request dispatched
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Step 3: Ambient Authority Attachment (Confused Deputy) │
+ │ Browser checks cookie jar for domain "target.com":     │
+ │ matches session cookie -> injects "Cookie: sid=abc"    │
+ │ (No SameSite=Strict or SameSite=Lax POST block)        │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             │ Wire transmission over HTTPS
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Step 4: Server Session Authentication                  │
+ │ target.com receives HTTP request, parses Cookie header,│
+ │ looks up session in Redis/Database -> maps to Victim   │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             │ Provenance check omitted
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Step 5: State Mutation Executed                        │
+ │ Application executes business logic (e.g. email update,│
+ │ password reset, fund transfer) in victim's context.    │
+ └───────────────────────────┬────────────────────────────┘
+                             │
+                             │ Response returned (200 OK / 302 Redirect)
+                             ▼
+ ┌────────────────────────────────────────────────────────┐
+ │ Step 6: Asymmetric Result Observation                 │
+ │ SOP prevents evil.com from reading the response body.  │
+ │ BUT state mutation on server is ALREADY COMMITTED!     │
+ └────────────────────────────────────────────────────────┘
+
+===============================================================================
