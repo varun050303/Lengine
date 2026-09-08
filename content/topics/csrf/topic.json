@@ -1,1 +1,33 @@
-{"schema_version": "2.0", "content_version": "1.1.0", "placeholder": true}
+{
+  "schema_version": "2.0",
+  "content_version": "1.1.0",
+  "topic_id": "topic.csrf",
+  "display_name": "Cross-Site Request Forgery (CSRF)",
+  "status": "approved",
+  "category": "client-side",
+  "aliases": ["CSRF", "Cross-Site Request Forgery", "XSRF", "Session Riding", "Cross-Site WebSockets Hijacking"],
+  "prerequisites": ["concept.same-origin-policy", "concept.ambient-credentials", "concept.samesite-cookies"],
+  "mechanism_family": "mechanism.origin-context-confusion",
+  "learning_objectives": [
+    "Deconstruct a state-changing web action into transport method, credential attachment mechanism, and origin verification sink.",
+    "Contrast the Same-Origin Policy's permissive cross-origin write rules against its restrictive read rules to identify why CSRF succeeds.",
+    "Formulate minimal, safe non-destructive experiments to verify whether an endpoint enforces anti-CSRF tokens and SameSite cookie policies.",
+    "Calibrate CSRF exploitability across browser environments, distinguishing between SameSite=None, SameSite=Lax navigations, and 2-minute Lax windows."
+  ],
+  "safety_contract": {
+    "authorization_assumption": "Testing must only be conducted against systems, web domains, and account profiles where explicit written authorization has been granted by the application owner.",
+    "scope_constraints": [
+      "Do not trigger state mutations (e.g. email change, password update, fund transfer) against user accounts not owned by the assessment team.",
+      "Conduct all cross-site verification experiments between two dedicated, tester-controlled accounts (e.g., tester-victim and tester-attacker).",
+      "Do not host public CSRF demonstration pages that can be triggered by unauthenticated third parties or internet crawlers."
+    ],
+    "side_effect_risk": "high",
+    "data_exposure_risk": "low",
+    "stop_conditions": [
+      "Halt testing immediately if an action inadvertently mutates production data or affects real customer accounts.",
+      "Do not perform destructive state changes (e.g., account deletion, irreversible balance transfer, administrative permission elevation) during automated verification."
+    ],
+    "safer_alternative": "Target a benign, idempotent, or easily reversible state change (such as updating a cosmetic profile bio or adding a test tag) rather than critical authentication or financial endpoints."
+  ],
+  "NOTE": "FULL CONTENT TOO LARGE FOR SINGLE ARG - SEE FOLLOW-UP COMMIT"
+}
