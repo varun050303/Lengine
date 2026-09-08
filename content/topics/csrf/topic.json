@@ -5,22 +5,25 @@
   "display_name": "Cross-Site Request Forgery (CSRF)",
   "status": "approved",
   "category": "client-side",
-  "aliases": ["CSRF", "Cross-Site Request Forgery", "XSRF", "Session Riding", "Cross-Site WebSockets Hijacking"],
-
+  "aliases": [
+    "CSRF",
+    "Cross-Site Request Forgery",
+    "XSRF",
+    "Session Riding",
+    "Cross-Site WebSockets Hijacking"
+  ],
   "prerequisites": [
     "concept.same-origin-policy",
     "concept.ambient-credentials",
     "concept.samesite-cookies"
   ],
   "mechanism_family": "mechanism.origin-context-confusion",
-
   "learning_objectives": [
     "Deconstruct a state-changing web action into transport method, credential attachment mechanism, and origin verification sink.",
     "Contrast the Same-Origin Policy's permissive cross-origin write rules against its restrictive read rules to identify why CSRF succeeds.",
     "Formulate minimal, safe non-destructive experiments to verify whether an endpoint enforces anti-CSRF tokens and SameSite cookie policies.",
     "Calibrate CSRF exploitability across browser environments, distinguishing between SameSite=None, SameSite=Lax navigations, and 2-minute Lax windows."
   ],
-
   "safety_contract": {
     "authorization_assumption": "Testing must only be conducted against systems, web domains, and account profiles where explicit written authorization has been granted by the application owner.",
     "scope_constraints": [
@@ -35,8 +38,7 @@
       "Do not perform destructive state changes (e.g., account deletion, irreversible balance transfer, administrative permission elevation) during automated verification."
     ],
     "safer_alternative": "Target a benign, idempotent, or easily reversible state change (such as updating a cosmetic profile bio or adding a test tag) rather than critical authentication or financial endpoints."
-  ],
-
+  },
   "implementation_variance": {
     "applies_when": [
       "The application relies on ambient credentials (session cookies, HTTP Basic/Digest authentication, or TLS client certificates) to identify authenticated users.",
@@ -56,7 +58,6 @@
       "Endpoints performing state mutations on HTTP GET remain vulnerable across all browsers even under SameSite=Lax, because top-level GET navigations always transmit Lax cookies."
     ]
   },
-
   "mental_model": {
     "one_sentence": "CSRF occurs when a web application executes a state-changing action based solely on ambient session credentials, allowing an untrusted external website to trick the user's browser into submitting an unauthorized request on the user's behalf.",
     "short_explanation": "When you visit a website, your browser saves your login session in cookies. By design, whenever your browser sends a request to that website, it automatically includes those cookies—this is 'ambient authority'. An attacker hosts a malicious web page that quietly sends a request to your bank or email provider. Because the Same-Origin Policy permits cross-origin request dispatch, your browser sends the request along with your real login cookies. The destination server sees your valid cookies and assumes you intended to perform the action, executing the attacker's commands using your privileges.",
@@ -66,25 +67,20 @@
       "where_it_breaks": "In the physical world, a human teller can inspect the courier, notice strange behavior, or demand an interactive signature. In the browser runtime, the HTTP client attaches the identical binary cookie string without any human hesitation, and standard HTTP requests carry no visual indicator of coercion unless the application explicitly validates cryptographic nonces or modern Fetch Metadata headers."
     }
   },
-
   "invariant": {
     "statement": "A state-changing action must not be executed without verifying that the request was intentionally initiated by the user within the authentic application context.",
     "why_it_matters": "Ambient credentials (session cookies) identify WHO the user is, but they do NOT prove WHAT CONTEXT generated the request. Without verifying request intentionality and origin provenance, any untrusted website visited by the user can commandeer the user's authenticated session, performing unauthorized financial transfers, password resets, account takeovers, and configuration changes.",
     "violation_condition": "An endpoint executes a state mutation upon receiving an HTTP request that carries valid ambient credentials, but lacks verification of an unpredictable, unforgeable origin-bound token or trusted origin metadata header.",
     "investigation_question": "Can an external origin cause the authenticated victim's browser to submit a request to this endpoint that successfully mutates server-side state, without the external origin knowing or guessing an unforgeable secret?"
   },
-
-
   "normal_behavior": {
     "description": "The user interacts with the authentic application interface (e.g. loads https://app.example.com/settings). The application renders an HTML form or client-side component containing a unique, cryptographically random anti-CSRF token tied to the user's active session. When the user deliberately clicks 'Save Changes', the browser dispatches a same-origin POST request containing both the ambient session cookie and the anti-CSRF token. The server validates both the session cookie and the anti-CSRF token before applying the changes.",
     "diagram": "User Interface (app.example.com) → Deliberate form submission → Dispatches POST with Cookie AND anti-CSRF token → Server verifies both → State mutation succeeds"
   },
-
   "vulnerable_behavior": {
     "description": "The target endpoint accepts state-changing requests relying exclusively on ambient cookies for authorization, without requiring or verifying an unforgeable anti-CSRF token. An attacker tricks the victim into visiting a malicious site (https://evil.com). The attacker's page automatically submits a hidden form or issues a request targeting the vulnerable endpoint. The victim's browser automatically appends the victim's session cookies. The server validates the session cookie and applies the state mutation, unaware that the request was initiated by evil.com.",
     "diagram": "Victim visits evil.com → Script auto-submits hidden form targeting app.example.com → Browser appends ambient session cookie → Target server sees valid session → State mutation executes without user consent"
   },
-
   "causal_mechanism": {
     "steps": [
       "1. The victim establishes an authenticated session with the target application, which sets an ambient session cookie in the browser's cookie jar.",
@@ -114,7 +110,6 @@
       "effect": "Execution of privileged transactions without victim knowledge or consent"
     }
   },
-
   "exploitability": {
     "conditions": [
       {
@@ -154,7 +149,6 @@
     ],
     "gate_rule": "Every AND condition must evaluate to true. In the final group, at least one of the OR conditions must evaluate to true for the endpoint to be exploitable."
   },
-
   "investigation": {
     "attack_surface": [
       "Account setting update endpoints (email change, password reset, 2FA toggle, phone number update)",
@@ -235,7 +229,6 @@
       }
     ]
   },
-
   "confirmation": {
     "what_must_be_proven": [
       "The state-changing request can be triggered from an external, untrusted origin.",
@@ -276,7 +269,6 @@
       }
     ]
   },
-
   "capability_and_impact": {
     "primitive": "Cross-origin HTTP request dispatch carrying ambient session credentials",
     "capabilities": [
@@ -314,7 +306,6 @@
       "Whether the browser environment is a modern desktop browser or an embedded mobile WebView"
     ]
   },
-
   "variants": [
     {
       "name": "Form-Based POST CSRF",
@@ -349,7 +340,6 @@
       "how_to_confirm": "Verify that a cross-origin form submission switches the active browser session to a predetermined attacker account."
     }
   ],
-
   "defense_analysis": [
     {
       "defense": "Synchronizer Token Pattern (Anti-CSRF Tokens)",
@@ -394,7 +384,6 @@
       "investigation": "Submit the state-changing request with the Origin header removed or set to 'null'. Test with Referer suppressed via Referrer-Policy. Check if the server accepts requests when both headers are absent."
     }
   ],
-
   "traps": {
     "common_misconceptions": [
       {
@@ -464,7 +453,6 @@
       }
     ]
   },
-
   "transfer": {
     "shared_mechanism": "Origin-Context Confusion: an untrusted origin coerces a client runtime with ambient credentials into issuing unauthorized instructions to a trusting server sink.",
     "related_topics": [
@@ -491,10 +479,8 @@
       "Mobile native apps handling custom URI schemes from web pages"
     ]
   },
-
   "claims_ref": "claims.json",
   "assessment_ref": "assessment.json",
-
   "sources": [
     {
       "id": "S1",
@@ -569,5 +555,4 @@
       "retrieved_this_pass": true
     }
   ]
-
 }
