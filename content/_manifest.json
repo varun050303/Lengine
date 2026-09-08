@@ -27,7 +27,7 @@
     { "topic": "graphql", "display_name": "GraphQL", "category": "advanced", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "ssti", "display_name": "Server-Side Template Injection", "category": "advanced", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "web-cache-poisoning", "display_name": "Web Cache Poisoning", "category": "advanced", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
-    { "topic": "host-header-attacks", "display_name": "HTTP Host Header Attacks", "category": "advanced", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
+    { "topic": "host-header-attacks", "display_name": "HTTP Host Header Attacks", "category": "advanced", "status": "completed", "revision_loop_count": 0, "last_updated": "2026-09-08" },
     { "topic": "request-smuggling", "display_name": "HTTP Request Smuggling", "category": "advanced", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "oauth", "display_name": "OAuth", "category": "advanced", "status": "not_started", "revision_loop_count": 0, "last_updated": null },
     { "topic": "jwt", "display_name": "JWT", "category": "advanced", "status": "not_started", "revision_loop_count": 0, "last_updated": null },

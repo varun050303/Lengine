@@ -52,7 +52,7 @@
     },
     {
       "claim_id": "claim.csrf.chromium-lax-post-window",
-      "statement": "Chromium-based browsers implement a temporary 'Lax-allowing-unsafe' compatibility window where cookies created without an explicit SameSite attribute are sent on cross-site top-level POST requests if the request occurs within 120 seconds of cookie creation.",
+      "statement": "Chromium-based browsers implement a temporary 'Lax-allowing-unsafe' compatibility window where cookies that lack an explicit SameSite attribute are sent on cross-site top-level POST requests if the cookie was set (created or updated via a new Set-Cookie header) within the preceding 120 seconds. Session rotation or re-authentication that issues a fresh Set-Cookie header re-opens this window.",
       "type": "implementation_variance",
       "scope": "Chromium browsers (Google Chrome, Microsoft Edge, Brave, Opera) running the default SameSite transition policy",
       "status": "supported",

@@ -27,17 +27,18 @@
     "The trust boundary between the attacker and the capability is not enforced at the input layer — the component acts on the input without verifying whether the attacker should have the resulting capability"
   ],
 
-  "members": ["topic.ssrf", "topic.xxe"],
+  "members": ["topic.ssrf", "topic.xxe", "topic.host-header-attacks"],
 
-  "investigation_question": "Can attacker-controlled input cause a privileged component to perform an action the attacker could not perform directly? What capability does the attacker gain — and what authority makes that capability possible?",
+  "investigation_question": "Can attacker-controlled input cause a privileged component to perform an action the attacker could not perform directly, or to produce output that a separate trusting party will act on as if it were authoritative? What capability does the attacker gain — and what authority or trust relationship makes that capability possible?",
 
-  "defensive_implication": "Validate attacker-controlled input against a strict allowlist before passing it to any privileged component. The validation must constrain the action to only those operations the attacker is authorized to trigger. Apply defense-in-depth at the infrastructure layer — assume the application-level validation may be bypassed and limit the privileged component's own capabilities (network segmentation, least-privilege IAM roles, disabled metadata endpoints).",
+  "defensive_implication": "Validate attacker-controlled input against a strict allowlist before passing it to any privileged component, and before embedding it in any output that other parties will trust (generated URLs, cache keys, routing decisions). The validation must constrain the action or output to only what the attacker is authorized to trigger or influence. Apply defense-in-depth at the infrastructure layer — assume the application-level validation may be bypassed and limit the privileged component's own capabilities (network segmentation, least-privilege IAM roles, disabled metadata endpoints) or its output's blast radius (short-lived tokens, cache-key completeness).",
 
   "common_manifestations": [
     "SSRF: Attacker controls the destination of a server-side HTTP request, gaining the server's network position",
     "XXE with external entities: XML parser fetches attacker-controlled URLs using the server's file/network access",
     "PDF generators that fetch attacker-controlled URLs using the server's network position",
-    "Headless browsers (Chromium, wkhtmltopdf) rendering attacker-controlled URLs from the server's network"
+    "Headless browsers (Chromium, wkhtmltopdf) rendering attacker-controlled URLs from the server's network",
+    "Host header attacks: Attacker-controlled Host/X-Forwarded-Host header is embedded unvalidated into generated URLs (e.g. password-reset links) or cache keys, causing a third party — not the attacker — to trust attacker-influenced content"
   ],
 
   "related_concepts": [
@@ -62,6 +63,14 @@
       "url": "https://owasp.org/www-community/attacks/Server_Side_Request_Forgery",
       "tier": 2,
       "claim": "SSRF allows an attacker to abuse server functionality to perform requests to internal/external resources on behalf of the server",
+      "retrieved_this_pass": true
+    },
+    {
+      "id": "S3",
+      "title": "PortSwigger Web Security Academy — Password reset poisoning",
+      "url": "https://portswigger.net/web-security/host-header/exploiting/password-reset-poisoning",
+      "tier": 2,
+      "claim": "Documents password reset poisoning as an attacker manipulating a vulnerable website into generating a password-reset link pointing to an attacker-controlled domain by controlling the Host header used to build that link — the output-generation sub-case of trust-boundary confusion, distinct from SSRF's network-fetch sub-case",
       "retrieved_this_pass": true
     }
   ]
