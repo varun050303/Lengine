@@ -1,43 +1,61 @@
-# Astro Starter Kit: Minimal
+# Lengine UI
 
-```sh
-npm create astro@latest -- --template minimal
+Astro-based **second-brain** viewer for Lengine topic packs (knowledge reference, not the investigation learner loop).
+
+## Purpose
+
+- Browse approved topic content (currently CSRF-focused homepage)
+- Visual diagrams, mindmap pillars, claims/sources, crosslinks
+- Loads canonical JSON from `../content/` at build/dev time
+
+The **investigation** product (specimen → hypotheses → experiments → evidence → reveal) lives under `investigation/` + `cli/investigate.js`, not this UI.
+
+## Run
+
+From repo root:
+
+```bash
+npm run ui          # dev server (astro in ui/)
+npm run ui:build    # production build
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Or from `ui/`:
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```bash
+npm install
+npm run dev         # http://localhost:4321
+npm run build
+npm run preview
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+Requires Node `>=22.12.0` (see `ui/package.json`).
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Content path
 
-Any static assets, like images, can be placed in the `public/` directory.
+`src/utils/csrf-knowledge.ts` resolves content as:
 
-## 🧞 Commands
+1. `process.cwd()/content` (if present)
+2. else `process.cwd()/../content` (when cwd is `ui/`)
 
-All commands are run from the root of the project, from a terminal:
+Run the dev server from `ui/` (or use root scripts that prefix correctly).
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+## Structure
 
-## 👀 Want to learn more?
+```
+ui/
+├── src/pages/index.astro          # Main shell (mindmap / diagrams / knowledge views)
+├── src/components/VisualDiagramsViewer.astro
+├── src/utils/
+│   ├── csrf-knowledge.ts          # Loads topic pack from content/
+│   ├── csrf-mindmap.ts
+│   ├── data.ts                    # Manifest / graph helpers
+│   ├── visual-diagrams.ts
+│   └── mermaid-definitions.ts
+└── src/styles/global.css
+```
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+## Known constraints
+
+- Homepage is hard-wired to the CSRF pack for now
+- Canonical topic names and mechanism labels are shown (reference UI, not pre-reveal investigation)
+- Keep files small when editing via API; prefer one-file commits
