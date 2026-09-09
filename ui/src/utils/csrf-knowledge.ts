@@ -63,7 +63,12 @@ export function getCsrfFullKnowledge(): TopicKnowledge {
   let mechanismFamily: any = null;
   if (fs.existsSync(mechPath)) {
     const families = JSON.parse(fs.readFileSync(mechPath, 'utf8')).families || [];
-    mechanismFamily = families.find((f: any) => f.id === 'origin-context-confusion' || f.id === 'trust-boundary-confusion');
+    // Prefer the topic's mechanism_family id when present in topic.json
+    const topicMech = (topicJson.mechanism_family || '').replace(/^mechanism\./, '');
+    mechanismFamily =
+      families.find((f: any) => f.id === topicMech) ||
+      families.find((f: any) => f.id === 'origin-context-confusion') ||
+      null;
   }
 
   // 7. Concepts
