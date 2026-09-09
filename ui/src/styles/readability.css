@@ -1,0 +1,161 @@
+/* Lengine UI — readability overrides (load after page styles) */
+
+html, body {
+  overflow: auto !important;
+  height: auto !important;
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.app-shell {
+  height: auto !important;
+  min-height: 100vh;
+}
+
+.top-navbar {
+  height: 52px;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.nav-modes {
+  flex-wrap: wrap;
+  max-width: 420px;
+}
+
+.mode-tab-btn {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.search-box {
+  width: 180px;
+  display: none;
+}
+
+.canvas-area {
+  padding: 24px 20px 48px !important;
+  overflow: visible !important;
+}
+
+.mindmap-flow {
+  min-width: 0 !important;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  gap: 20px !important;
+  align-items: stretch !important;
+}
+
+.core-node {
+  max-width: none;
+  text-align: left;
+  padding: 16px 18px;
+}
+
+.core-title { font-size: 18px; }
+.core-subtitle {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+/* One stage at a time vertically — not a 4×2 dashboard */
+.pillars-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  width: 100%;
+}
+
+.pillar-card-wrapper { gap: 8px; }
+
+.node-card { padding: 12px 14px; }
+
+.pillar-head-title { font-size: 15px; }
+
+.pillar-head-tagline {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-dim, #798d7c);
+}
+
+/* Sub-nodes collapsed until stage is open / focused */
+.sub-nodes-group {
+  display: none;
+  margin-top: 4px;
+  padding-left: 12px;
+  border-left: 2px solid var(--border-color, #243428);
+}
+
+.pillar-card-wrapper.is-open .sub-nodes-group,
+.pillar-card-wrapper:focus-within .sub-nodes-group {
+  display: flex;
+}
+
+.sub-node-card { padding: 8px 10px; }
+.sub-node-card .sub-title {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.inspector-drawer {
+  width: min(360px, 100vw) !important;
+  max-width: 100%;
+}
+
+.inspector-drawer.collapsed { width: 0 !important; }
+
+.drawer-title { font-size: 17px; }
+
+.drawer-scroll-body {
+  padding: 16px !important;
+  gap: 16px !important;
+}
+
+.recon-check-item,
+.code-view-body,
+.exp-line {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+.crosslinks-hero,
+.crosslinks-grid {
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.knowledge-card { padding: 14px 16px; }
+.knowledge-card-title {
+  font-size: 15px;
+  line-height: 1.35;
+}
+.knowledge-card-desc {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-dim, #798d7c);
+}
+
+.claims-table {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  #viewMindmap.active-view {
+    flex-direction: column !important;
+  }
+  .inspector-drawer:not(.collapsed) {
+    width: 100% !important;
+    max-height: 40vh;
+    border-left: none;
+    border-top: 1px solid var(--border-color, #243428);
+  }
+}
+
+@media (max-width: 720px) {
+  .topic-mechanism-tag { display: none; }
+  .nav-modes { max-width: 100%; }
+}
