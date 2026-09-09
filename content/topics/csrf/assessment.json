@@ -21,10 +21,10 @@
   "scenarios": [
     {
       "scenario_id": "scenario.csrf.cswsh-trading-terminal",
-      "title": "Cross-Site WebSocket Hijacking (CSWSH) in a Real-Time Trading Terminal",
+      "title": "Real-Time Trading Terminal Socket Authentication",
       "context_domain": "FinTech / Real-Time Financial Trading Architecture",
       "prompt": {
-        "setup": "A financial brokerage platform provides a real-time order execution terminal at https://trade.apex-markets.com/terminal. When an authenticated trader loads the page, client-side JavaScript establishes a WebSocket connection to wss://trade.apex-markets.com/ws/orders. The browser attaches the trader's ambient session cookie (session_id) during the initial HTTP 101 Switching Protocols upgrade request. The session cookie is configured as 'SameSite=None; Secure' because the firm previously embedded chart widgets on affiliate marketing domains. Once connected, the WebSocket channel accepts JSON-formatted trading instructions (e.g., {\"action\":\"SUBMIT_ORDER\",\"pair\":\"ETH/USD\",\"side\":\"BUY\",\"amount\":5.0}). No secondary anti-CSRF token is passed in the WebSocket handshake query parameters or initial frame, and the server application does not inspect the HTTP Origin header.",
+        "setup": "A financial brokerage platform provides a real-time order execution terminal at https://trade.apex-markets.com/terminal. When an authenticated trader loads the page, client-side JavaScript establishes a WebSocket connection to wss://trade.apex-markets.com/ws/orders. The browser attaches the trader's ambient session cookie (session_id) during the initial HTTP 101 Switching Protocols upgrade request. The session cookie is configured as 'SameSite=None; Secure' because the firm previously embedded chart widgets on affiliate marketing domains. Once connected, the WebSocket channel accepts JSON-formatted trading instructions (e.g., {\"action\":\"SUBMIT_ORDER\",\"pair\":\"ETH/USD\",\"side\":\"BUY\",\"amount\":5.0}). No secondary unpredictable value is passed in the WebSocket handshake query parameters or initial frame to prove the request originated from the real terminal page, and the server application does not inspect the HTTP Origin header.",
         "task_question": "Analyze this architecture: (1) Formulate the security invariant and explain why the Same-Origin Policy does not prevent an external web page from opening this socket. (2) Map the trust boundary transition and ambient credential flow. (3) Formulate three mutually exclusive hypotheses regarding handshake validation. (4) Propose a minimal safe experiment to test exploitability without triggering unauthorized financial trades."
       },
       "expected_reasoning": {
@@ -127,11 +127,11 @@
     },
     {
       "scenario_id": "scenario.csrf.account-email-flawed-token",
-      "title": "Account Email Update with Flawed Anti-CSRF Token Validation",
+      "title": "Account Email Update with Inconsistent Server-Side Validation",
       "context_domain": "SaaS Platform User Settings",
       "prompt": {
-        "setup": "A SaaS collaboration platform allows users to change their account email address at POST /api/user/email. The form in the UI includes an anti-CSRF token generated server-side. The session cookie is configured as 'SameSite=None; Secure'. During initial testing, you observe that submitting the form with an invalid token returns 403 Forbidden. However, you notice that the API endpoint is written using a generic web framework request handler.",
-        "task_question": "Analyze this endpoint: (1) Formulate three hypotheses regarding how the server validates the anti-CSRF token. (2) Propose safe differential experiments to verify whether token validation can be bypassed."
+        "setup": "A SaaS collaboration platform allows users to change their account email address at POST /api/user/email. The form in the UI includes a hidden, random value generated server-side and embedded as a form field. The session cookie is configured as 'SameSite=None; Secure'. During initial testing, you observe that submitting the form with this value altered or removed returns 403 Forbidden. However, you notice that the API endpoint is written using a generic web framework request handler.",
+        "task_question": "Analyze this endpoint: (1) Formulate three hypotheses regarding how the server validates this hidden value. (2) Propose safe differential experiments to verify whether that validation can be bypassed."
       },
       "expected_reasoning": {
         "invariant_analysis": "The invariant requires that the server strictly validates a valid, session-tied anti-CSRF token on every state-changing request.",

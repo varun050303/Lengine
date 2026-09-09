@@ -8,7 +8,8 @@
       "type": "technical_fact",
       "scope": "All standard web browsers implementing the W3C / WHATWG Same-Origin Policy",
       "status": "supported",
-      "sources": ["S1", "S2"]
+      "sources": ["S1", "S2"],
+      "last_verified": "2026-09-08"
     },
     {
       "claim_id": "claim.csrf.ambient-authority-attachment",
@@ -16,7 +17,8 @@
       "type": "causal_claim",
       "scope": "Default browser HTTP client behavior for requests matching domain and path scoping rules (subject to SameSite constraints)",
       "status": "supported",
-      "sources": ["S2", "S3"]
+      "sources": ["S2", "S3"],
+      "last_verified": "2026-09-08"
     },
     {
       "claim_id": "claim.csrf.samesite-lax-navigation",
@@ -24,7 +26,8 @@
       "type": "technical_fact",
       "scope": "Browsers implementing RFC 6265bis SameSite cookie semantics",
       "status": "supported",
-      "sources": ["S4", "S5"]
+      "sources": ["S4", "S5"],
+      "last_verified": "2026-09-08"
     },
     {
       "claim_id": "claim.csrf.token-unpredictability",
@@ -32,7 +35,8 @@
       "type": "defensive_guarantee",
       "scope": "Web applications using cryptographically secure pseudorandom number generators (CSPRNG) tied to the user's active session and validated on all mutating requests",
       "status": "supported",
-      "sources": ["S3", "S6"]
+      "sources": ["S3", "S6"],
+      "last_verified": "2026-09-08"
     },
     {
       "claim_id": "claim.csrf.fetch-metadata-isolation",
@@ -40,7 +44,8 @@
       "type": "defensive_guarantee",
       "scope": "Modern browsers supporting W3C Fetch Metadata Request Headers",
       "status": "supported",
-      "sources": ["S7"]
+      "sources": ["S7"],
+      "last_verified": "2026-09-08"
     },
     {
       "claim_id": "claim.csrf.cswsh-origin-handshake",
@@ -48,7 +53,8 @@
       "type": "causal_claim",
       "scope": "WebSocket servers relying on cookie-based authentication without origin validation",
       "status": "supported",
-      "sources": ["S8", "S5"]
+      "sources": ["S8", "S5"],
+      "last_verified": "2026-09-08"
     },
     {
       "claim_id": "claim.csrf.chromium-lax-post-window",
@@ -56,7 +62,8 @@
       "type": "implementation_variance",
       "scope": "Chromium browsers (Google Chrome, Microsoft Edge, Brave, Opera) running the default SameSite transition policy",
       "status": "supported",
-      "sources": ["S9"]
+      "sources": ["S9"],
+      "last_verified": "2026-09-08"
     }
   ]
 }

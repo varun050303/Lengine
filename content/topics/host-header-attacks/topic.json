@@ -242,8 +242,8 @@
       "Single-page applications that trust a server-generated bootstrap value built from the Host header"
     ]
   },
-  "claims_ref": "content/topics/host-header-attacks/claims.json",
-  "assessment_ref": "content/topics/host-header-attacks/assessment.json",
+  "claims_ref": "claims.json",
+  "assessment_ref": "assessment.json",
   "sources": [
     { "id": "S1", "title": "PortSwigger Web Security Academy — Password reset poisoning", "url": "https://portswigger.net/web-security/host-header/exploiting/password-reset-poisoning", "tier": 2, "claim": "Documents password reset poisoning as an attacker manipulating a website into generating a password-reset link pointing to an attacker-controlled domain, by controlling the Host header used to build that link.", "retrieved_this_pass": true },
     { "id": "S2", "title": "IETF RFC 9112 — HTTP/1.1, Section 3.2.2 (request-target)", "url": "https://www.rfc-editor.org/rfc/rfc9112", "tier": 1, "claim": "Specifies that when a request-target is in absolute-form, an origin server MUST ignore any received Host header field and use the host information from the request-target instead.", "retrieved_this_pass": true },

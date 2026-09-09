@@ -4,6 +4,7 @@ import { select } from '@inquirer/prompts';
 import chalk from 'chalk';
 import { browseKnowledgeBase } from './browse.js';
 import { scaffoldContent } from './scaffold.js';
+import { runInvestigation } from './investigate.js';
 import { spawn } from 'child_process';
 import path from 'path';
 
@@ -18,6 +19,7 @@ async function main() {
     const choice = await select({
       message: 'Main Menu:',
       choices: [
+        { name: '🔬 Investigate Specimen', value: 'investigate' },
         { name: '📖 Browse Knowledge Base', value: 'browse' },
         { name: '✏️  Author New Content', value: 'author' },
         { name: '🔍 Run Quality Gates', value: 'validate' },
@@ -26,6 +28,9 @@ async function main() {
     });
 
     switch (choice) {
+      case 'investigate':
+        await runInvestigation();
+        break;
       case 'browse':
         await browseKnowledgeBase();
         break;

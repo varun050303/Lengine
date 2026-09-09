@@ -1,0 +1,1357 @@
+---
+import { VISUAL_DIAGRAMS_CONFIG } from '../utils/visual-diagrams';
+import { MERMAID_DIAGRAMS } from '../utils/mermaid-definitions';
+
+interface Props {
+  diagrams: { id: string; title: string; filename: string; content: string }[];
+}
+
+const { diagrams } = Astro.props;
+---
+
+<div class="visual-diagrams-layout">
+  <!-- LEFT BLUEPRINT NAVIGATION SIDEBAR -->
+  <aside class="diag-nav-sidebar">
+    <div class="diag-nav-header">
+      <div class="blueprint-badge">ARCHITECTURAL BLUEPRINTS</div>
+      <h3>System Models & Flowcharts</h3>
+      <p>Formal causal diagrams for security researchers</p>
+    </div>
+
+    <div class="diag-btn-list">
+      {VISUAL_DIAGRAMS_CONFIG.map((vd, index) => (
+        <button class={`diag-select-btn ${index === 0 ? 'active' : ''}`} data-diagram-id={vd.id}>
+          <div class="btn-top-row">
+            <span class="btn-num">MODEL 0{vd.number}</span>
+            <span class="btn-type-pill">{vd.number === 4 ? 'LOGIC GATE' : vd.number === 5 ? 'TREE' : 'SEQUENCE'}</span>
+          </div>
+          <span class="btn-title">{vd.title}</span>
+          <span class="btn-sub">{vd.subtitle}</span>
+        </button>
+      ))}
+    </div>
+
+    <!-- REPO PROVENANCE FOOTER -->
+    <div class="sidebar-provenance">
+      <span>Repository Specification:</span>
+      <code>content/topics/csrf/diagrams/</code>
+    </div>
+  </aside>
+
+  <!-- MAIN DIAGRAM WORKSPACE -->
+  <main class="diag-main-display">
+    <!-- TOP WORKSPACE TOOLBAR -->
+    <header class="diag-toolbar">
+      <div class="diag-meta-titles">
+        <div class="diag-meta-tag" id="activeDiagramTag">DIAGRAM 01 &bull; TRUST BOUNDARY</div>
+        <h2 id="activeDiagramTitle">1. Origin-Context Trust Boundary</h2>
+        <p id="activeDiagramSub">How untrusted origins exploit the browser runtime as a Confused Deputy</p>
+      </div>
+
+      <!-- VIEW MODE & CANVAS CONTROLS -->
+      <div class="diag-controls-group">
+        <!-- 3-WAY VIEW TOGGLE -->
+        <div class="view-mode-toggle">
+          <button class="toggle-btn active" id="btnModeSvg" title="Interactive Vector Architecture Diagram">
+            <span>🎨</span> Vector SVG
+          </button>
+          <button class="toggle-btn" id="btnModeMermaid" title="Mermaid Graph & Sequence Diagram">
+            <span>📊</span> Mermaid
+          </button>
+          <button class="toggle-btn" id="btnModeAscii" title="Canonical Raw ASCII Specification">
+            <span>📝</span> Raw ASCII
+          </button>
+        </div>
+
+        <!-- CANVAS ZOOM CONTROLS -->
+        <div class="canvas-zoom-tools">
+          <button class="tool-btn" id="btnZoomOut" title="Zoom Out">&minus;</button>
+          <span class="zoom-indicator" id="zoomLevelText">100%</span>
+          <button class="tool-btn" id="btnZoomIn" title="Zoom In">&plus;</button>
+          <button class="tool-btn" id="btnZoomReset" title="Reset Zoom">⟲</button>
+        </div>
+
+        <!-- COPY ACTION -->
+        <button class="action-btn" id="btnCopyDiagramSpec">
+          <span>📋</span> Copy Spec
+        </button>
+      </div>
+    </header>
+
+    <!-- INVARIANT BANNER -->
+    <div class="diag-takeaway-banner">
+      <div class="banner-badge">SECURITY INVARIANT</div>
+      <span id="activeTakeawayText">The target server evaluates identity (valid session cookie) but fails to evaluate provenance (originating context).</span>
+    </div>
+
+    <!-- VIEWPORT WORKSPACE -->
+    <div class="diag-workspace-container" id="diagCanvasContainer">
+      <!-- 1. VECTOR SVG VIEWPORT -->
+      <div id="svgViewport" class="diagram-viewport-panel active">
+        <div class="svg-zoom-wrapper" id="svgZoomTarget">
+
+          <!-- ================= DIAGRAM 1: TRUST BOUNDARY ================= -->
+          <div class="svg-flow-card active" id="svg_diag_1">
+            <svg viewBox="0 0 1060 620" class="arch-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <marker id="arrow-red" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#ff5252" />
+                </marker>
+                <marker id="arrow-cyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#4dd8d8" />
+                </marker>
+                <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 8 5 L 0 9 z" fill="#52dc88" />
+                </marker>
+                <linearGradient id="grad-attacker" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#210d10" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#120608" stop-opacity="0.9" />
+                </linearGradient>
+                <linearGradient id="grad-browser" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#0e1a22" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#081016" stop-opacity="0.9" />
+                </linearGradient>
+                <linearGradient id="grad-server" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#0e1f16" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#08120c" stop-opacity="0.9" />
+                </linearGradient>
+              </defs>
+
+              <!-- SWIMLANE 1: UNTRUSTED ORIGIN -->
+              <rect x="30" y="30" width="300" height="550" rx="10" fill="url(#grad-attacker)" stroke="#ff5252" stroke-width="1.5" stroke-dasharray="4 2" />
+              <rect x="30" y="30" width="300" height="42" rx="10" fill="#2d1014" />
+              <text x="50" y="56" fill="#ff7070" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700" letter-spacing="1">UNTRUSTED ORIGIN CONTEXT</text>
+              <text x="50" y="95" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Attacker Domain (evil.com)</text>
+
+              <!-- Attacker Sub-card: Staged Payload -->
+              <g class="interactive-node" data-inspect-title="Attacker Form Payload" data-inspect-desc="Attacker page hosts a form pre-populated with victim funds transfer parameters. Executes automatically via JavaScript onload.">
+                <rect x="50" y="120" width="260" height="150" rx="8" fill="#180a0c" stroke="#542025" stroke-width="1" />
+                <text x="65" y="145" fill="#ff8552" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="600">&lt;form action="https://bank.com/transfer"&gt;</text>
+                <text x="65" y="170" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">&lt;input name="recipient" value="hacker" /&gt;</text>
+                <text x="65" y="190" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">&lt;input name="amount" value="5000" /&gt;</text>
+                <text x="65" y="215" fill="#ffd8a8" font-family="'JetBrains Mono', monospace" font-size="10">&lt;script&gt;document.forms[0].submit()&lt;/script&gt;</text>
+                <rect x="65" y="235" width="230" height="22" rx="4" fill="#381318" />
+                <text x="75" y="250" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="10">⚡ Automated Cross-Origin Dispatch</text>
+              </g>
+
+              <!-- SWIMLANE 2: VICTIM BROWSER RUNTIME -->
+              <rect x="390" y="30" width="320" height="550" rx="10" fill="url(#grad-browser)" stroke="#4dd8d8" stroke-width="1.5" />
+              <rect x="390" y="30" width="320" height="42" rx="10" fill="#132630" />
+              <text x="410" y="56" fill="#4dd8d8" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700" letter-spacing="1">VICTIM CLIENT (CONFUSED DEPUTY)</text>
+              <text x="410" y="95" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Browser Network Engine</text>
+
+              <!-- Cookie Jar Container -->
+              <g class="interactive-node" data-inspect-title="Browser Cookie Jar" data-inspect-desc="The browser holds valid session cookies for bank.com. Because Same-Origin Policy permits cross-origin writes, cookies with SameSite=None are automatically injected.">
+                <rect x="410" y="120" width="280" height="150" rx="8" fill="#0c171e" stroke="#1d3d4d" stroke-width="1" />
+                <text x="425" y="145" fill="#63a4fc" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">🍪 Cookie Jar Storage</text>
+                <text x="425" y="170" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">Domain: <tspan fill="#f0f7f1">bank.com</tspan> | Path: <tspan fill="#f0f7f1">/</tspan></text>
+                <text x="425" y="195" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11">Set-Cookie: session_id=sess_user_9921</text>
+                <text x="425" y="218" fill="#f5b041" font-family="'JetBrains Mono', monospace" font-size="11">SameSite=None (or Lax GET)</text>
+                <rect x="425" y="235" width="250" height="22" rx="4" fill="#1b3644" />
+                <text x="435" y="250" fill="#7ae4ff" font-family="'JetBrains Mono', monospace" font-size="10">✔ Ambient Authority Automatically Attached</text>
+              </g>
+
+              <!-- TRUST BOUNDARY WALL (Between Attacker & Browser) -->
+              <line x1="360" y1="30" x2="360" y2="580" stroke="#ff5252" stroke-width="2" stroke-dasharray="6 4" />
+              <rect x="345" y="290" width="30" height="180" rx="4" fill="#361014" stroke="#ff5252" />
+              <text x="358" y="320" fill="#ff8552" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" writing-mode="vertical-rl" letter-spacing="2">TRUST BOUNDARY</text>
+
+              <!-- SWIMLANE 3: TARGET APPLICATION SERVER -->
+              <rect x="770" y="30" width="260" height="550" rx="10" fill="url(#grad-server)" stroke="#52dc88" stroke-width="1.5" />
+              <rect x="770" y="30" width="260" height="42" rx="10" fill="#132b1d" />
+              <text x="790" y="56" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700" letter-spacing="1">TARGET SINK (bank.com)</text>
+              <text x="790" y="95" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Banking Application Server</text>
+
+              <!-- Server Validation Box -->
+              <g class="interactive-node" data-inspect-title="Server State Mutation Sink" data-inspect-desc="The server validates that session_id belongs to an authenticated user, but fails to check Origin, Referer, or Anti-CSRF nonces. It commits the transaction blindly.">
+                <rect x="790" y="120" width="220" height="150" rx="8" fill="#0a180f" stroke="#1c4728" stroke-width="1" />
+                <text x="805" y="145" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">⚙️ Endpoint: /api/transfer</text>
+                <text x="805" y="170" fill="#b7f35d" font-family="'JetBrains Mono', monospace" font-size="11">1. Session Validated: TRUE ✔</text>
+                <text x="805" y="195" fill="#ff5252" font-family="'JetBrains Mono', monospace" font-size="11">2. Origin Checked: FALSE ❌</text>
+                <text x="805" y="218" fill="#ff5252" font-family="'JetBrains Mono', monospace" font-size="11">3. CSRF Token Checked: FALSE ❌</text>
+                <rect x="805" y="235" width="190" height="22" rx="4" fill="#3b1518" />
+                <text x="815" y="250" fill="#ff8080" font-family="'JetBrains Mono', monospace" font-size="10">💥 State Mutation Committed!</text>
+              </g>
+
+              <!-- PROTOCOL ARROWS -->
+              <!-- Arrow 1: Attacker -> Browser -->
+              <path d="M 310 195 L 400 195" stroke="#ff5252" stroke-width="2.5" marker-end="url(#arrow-red)" />
+              <rect x="325" y="172" width="65" height="18" rx="3" fill="#2d0f12" />
+              <text x="330" y="185" fill="#ff7373" font-family="'JetBrains Mono', monospace" font-size="9">1. Dispatches</text>
+
+              <!-- Arrow 2: Browser -> Bank Server -->
+              <path d="M 690 195 L 780 195" stroke="#f5b041" stroke-width="2.5" marker-end="url(#arrow-cyan)" />
+              <rect x="700" y="165" width="70" height="26" rx="3" fill="#2e210a" />
+              <text x="705" y="178" fill="#ffd175" font-family="'JetBrains Mono', monospace" font-size="9">2. POST /transfer</text>
+              <text x="705" y="188" fill="#ffd175" font-family="'JetBrains Mono', monospace" font-size="8">+ Cookie: sess</text>
+
+              <!-- Arrow 3: Server -> Browser (Response) -->
+              <path d="M 790 380 L 700 380" stroke="#52dc88" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrow-green)" />
+              <rect x="715" y="360" width="60" height="18" rx="3" fill="#102b1b" />
+              <text x="720" y="373" fill="#75ffaa" font-family="'JetBrains Mono', monospace" font-size="9">3. HTTP 200</text>
+
+              <!-- SOP Shield Blocking Attacker Read -->
+              <rect x="410" y="340" width="280" height="100" rx="8" fill="#132219" stroke="#52dc88" stroke-width="1" />
+              <text x="425" y="365" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">🛡️ Same-Origin Policy (SOP) Block</text>
+              <text x="425" y="390" fill="#c4d2c5" font-family="'Outfit', sans-serif" font-size="12">Browser prevents evil.com from reading response body.</text>
+              <text x="425" y="415" fill="#ff8552" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="600">CRITICAL: Server mutation is ALREADY committed!</text>
+
+              <line x1="410" y1="390" x2="330" y2="390" stroke="#ff5252" stroke-width="2" stroke-dasharray="3 3" />
+              <circle cx="370" cy="390" r="10" fill="#ff5252" />
+              <text x="367" y="394" fill="#fff" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">✕</text>
+            </svg>
+          </div>
+
+          <!-- ================= DIAGRAM 2: NORMAL VS VULNERABLE ================= -->
+          <div class="svg-flow-card" id="svg_diag_2">
+            <svg viewBox="0 0 1060 620" class="arch-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+              <!-- TRACK 1: NORMAL INTRA-ORIGIN (SAFE) -->
+              <rect x="30" y="30" width="480" height="550" rx="10" fill="#0a1710" stroke="#52dc88" stroke-width="1.5" />
+              <rect x="30" y="30" width="480" height="42" rx="10" fill="#122e1e" />
+              <text x="50" y="56" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">✔ 1. NORMAL INTRA-ORIGIN INTERACTION (SAFE)</text>
+
+              <!-- Normal Step 1 -->
+              <g class="interactive-node" data-inspect-title="Legitimate Page Navigation" data-inspect-desc="User navigates directly to legitimate banking form. Context is same-origin.">
+                <rect x="50" y="90" width="440" height="75" rx="6" fill="#102418" stroke="#255436" stroke-width="1" />
+                <circle cx="75" cy="127" r="14" fill="#52dc88" />
+                <text x="71" y="132" fill="#000" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">1</text>
+                <text x="100" y="118" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">User navigates to https://bank.com/transfer</text>
+                <text x="100" y="140" fill="#8bc99c" font-family="'JetBrains Mono', monospace" font-size="11">Frontend renders form containing unique Anti-CSRF Token Nonce</text>
+              </g>
+
+              <path d="M 270 165 L 270 195" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+
+              <!-- Normal Step 2 -->
+              <g class="interactive-node" data-inspect-title="User Dispatches Form with Nonce" data-inspect-desc="Request includes both session cookie AND the unpredictable anti-CSRF token read from the DOM.">
+                <rect x="50" y="205" width="440" height="85" rx="6" fill="#102418" stroke="#255436" stroke-width="1" />
+                <circle cx="75" cy="247" r="14" fill="#52dc88" />
+                <text x="71" y="252" fill="#000" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">2</text>
+                <text x="100" y="230" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">Dispatches POST /api/transfer</text>
+                <text x="100" y="252" fill="#8bc99c" font-family="'JetBrains Mono', monospace" font-size="11">Origin: bank.com | Cookie: session_id=xyz</text>
+                <text x="100" y="272" fill="#b7f35d" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">X-CSRF-Token: 9f8a2e1d7c3b (Validated Cryptographic Nonce)</text>
+              </g>
+
+              <path d="M 270 290 L 270 320" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+
+              <!-- Normal Step 3 -->
+              <g class="interactive-node" data-inspect-title="Server Dual Validation" data-inspect-desc="Server validates authentication (session cookie) AND intent provenance (CSRF token matches session).">
+                <rect x="50" y="330" width="440" height="85" rx="6" fill="#102418" stroke="#255436" stroke-width="1" />
+                <circle cx="75" cy="372" r="14" fill="#52dc88" />
+                <text x="71" y="377" fill="#000" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">3</text>
+                <text x="100" y="355" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">Bank Server Validates Dual Predicate</text>
+                <text x="100" y="377" fill="#8bc99c" font-family="'JetBrains Mono', monospace" font-size="11">1. Session Active ✔ | 2. Token Matches Session ✔</text>
+                <text x="100" y="397" fill="#7ae4ff" font-family="'JetBrains Mono', monospace" font-size="11">Intent Provenance Verified &rarr; Safe to Mutate State</text>
+              </g>
+
+              <path d="M 270 415 L 270 445" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+
+              <!-- Normal Outcome -->
+              <rect x="50" y="455" width="440" height="90" rx="6" fill="#133822" stroke="#52dc88" stroke-width="1.5" />
+              <text x="70" y="490" fill="#b7f35d" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700">✅ INTENDED STATE MUTATION COMMITTED</text>
+              <text x="70" y="515" fill="#e0f8e5" font-family="'Outfit', sans-serif" font-size="13">Transaction executed with verified user intentionality and authorization.</text>
+
+              <!-- TRACK 2: VULNERABLE CROSS-ORIGIN (CSRF) -->
+              <rect x="550" y="30" width="480" height="550" rx="10" fill="#18090b" stroke="#ff5252" stroke-width="1.5" />
+              <rect x="550" y="30" width="480" height="42" rx="10" fill="#301014" />
+              <text x="570" y="56" fill="#ff7070" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">💥 2. CROSS-ORIGIN FORCED EXECUTION (VULNERABLE)</text>
+
+              <!-- Vulnerable Step 1 -->
+              <g class="interactive-node" data-inspect-title="Victim Visits Malicious Site" data-inspect-desc="Victim visits evil.com while holding an active session cookie for bank.com in their browser cookie jar.">
+                <rect x="570" y="90" width="440" height="75" rx="6" fill="#290e12" stroke="#591e25" stroke-width="1" />
+                <circle cx="595" cy="127" r="14" fill="#ff5252" />
+                <text x="591" y="132" fill="#fff" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">1</text>
+                <text x="620" y="118" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">Victim visits external site https://evil.com/prize</text>
+                <text x="620" y="140" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11">Hidden form auto-submits targeting https://bank.com/transfer</text>
+              </g>
+
+              <path d="M 790 165 L 790 195" stroke="#ff5252" stroke-width="2" marker-end="url(#arrow-red)" />
+
+              <!-- Vulnerable Step 2 -->
+              <g class="interactive-node" data-inspect-title="Confused Deputy Cookie Attachment" data-inspect-desc="Browser dispatches request with ambient cookie but lacks the unpredictable token.">
+                <rect x="570" y="205" width="440" height="85" rx="6" fill="#290e12" stroke="#591e25" stroke-width="1" />
+                <circle cx="595" cy="247" r="14" fill="#ff5252" />
+                <text x="591" y="252" fill="#fff" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">2</text>
+                <text x="620" y="230" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">Browser Network Engine (Confused Deputy)</text>
+                <text x="620" y="252" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11">Origin: evil.com | Cookie: session_id=xyz (AMBIENT ATTACHMENT)</text>
+                <text x="620" y="272" fill="#ff5252" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">❌ NO Anti-CSRF Token Present!</text>
+              </g>
+
+              <path d="M 790 290 L 790 320" stroke="#ff5252" stroke-width="2" marker-end="url(#arrow-red)" />
+
+              <!-- Vulnerable Step 3 -->
+              <g class="interactive-node" data-inspect-title="Server Omission of Provenance" data-inspect-desc="Server validates session_id but omits intent check, conflating identity with provenance.">
+                <rect x="570" y="330" width="440" height="85" rx="6" fill="#290e12" stroke="#591e25" stroke-width="1" />
+                <circle cx="595" cy="372" r="14" fill="#ff5252" />
+                <text x="591" y="377" fill="#fff" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">3</text>
+                <text x="620" y="355" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14" font-weight="600">Vulnerable Bank Server Flaw</text>
+                <text x="620" y="377" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11">1. Session Active: TRUE ✔ | 2. Origin/Intent Check: OMITTED ❌</text>
+                <text x="620" y="397" fill="#ffb8ad" font-family="'JetBrains Mono', monospace" font-size="11">Conflates WHO holds session with WHAT originated request</text>
+              </g>
+
+              <path d="M 790 415 L 790 445" stroke="#ff5252" stroke-width="2" marker-end="url(#arrow-red)" />
+
+              <!-- Vulnerable Outcome -->
+              <rect x="570" y="455" width="440" height="90" rx="6" fill="#421217" stroke="#ff5252" stroke-width="1.5" />
+              <text x="590" y="490" fill="#ff8552" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700">💥 UNAUTHORIZED STATE MUTATION EXECUTED!</text>
+              <text x="590" y="515" fill="#ffe0e0" font-family="'Outfit', sans-serif" font-size="13">Funds transferred to attacker without victim consent or knowledge.</text>
+            </svg>
+          </div>
+
+          <!-- ================= DIAGRAM 3: CAUSAL PIPELINE ================= -->
+          <div class="svg-flow-card" id="svg_diag_3">
+            <svg viewBox="0 0 1060 580" class="arch-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+              <!-- 6-STAGE PIPELINE (ROW 1: 1 -> 2 -> 3) -->
+              <!-- Stage 1 -->
+              <g class="interactive-node" data-inspect-title="Stage 1: Payload Staging" data-inspect-desc="Attacker prepares exploit page on evil.com with target parameters pre-filled.">
+                <rect x="40" y="60" width="280" height="180" rx="8" fill="#141a29" stroke="#63a4fc" stroke-width="1.5" />
+                <rect x="40" y="60" width="280" height="32" rx="8" fill="#1d273d" />
+                <text x="55" y="82" fill="#63a4fc" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">STAGE 01 &bull; EXTERNAL CONTEXT</text>
+                <text x="55" y="120" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Payload Staging</text>
+                <text x="55" y="145" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">Host malicious HTML on evil.com</text>
+                <text x="55" y="165" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">recipient=attacker&amp;amount=5000</text>
+                <rect x="55" y="185" width="250" height="24" rx="4" fill="#0b111a" />
+                <text x="65" y="201" fill="#7eb2ff" font-family="'JetBrains Mono', monospace" font-size="10">Attacker-controlled origin</text>
+              </g>
+
+              <path d="M 320 150 L 380 150" stroke="#63a4fc" stroke-width="2.5" marker-end="url(#arrow-cyan)" />
+
+              <!-- Stage 2 -->
+              <g class="interactive-node" data-inspect-title="Stage 2: Coerced Dispatch" data-inspect-desc="Victim visits page; client DOM executes script triggering cross-origin POST dispatch.">
+                <rect x="390" y="60" width="280" height="180" rx="8" fill="#1f142b" stroke="#b890fa" stroke-width="1.5" />
+                <rect x="390" y="60" width="280" height="32" rx="8" fill="#2d1d3e" />
+                <text x="405" y="82" fill="#b890fa" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">STAGE 02 &bull; CLIENT EXECUTION</text>
+                <text x="405" y="120" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Coerced Dispatch</text>
+                <text x="405" y="145" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">Victim visits evil.com</text>
+                <text x="405" y="165" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">DOM auto-submits hidden form</text>
+                <rect x="405" y="185" width="250" height="24" rx="4" fill="#12091c" />
+                <text x="415" y="201" fill="#d2b8ff" font-family="'JetBrains Mono', monospace" font-size="10">Browser issues network request</text>
+              </g>
+
+              <path d="M 670 150 L 730 150" stroke="#b890fa" stroke-width="2.5" marker-end="url(#arrow-cyan)" />
+
+              <!-- Stage 3 -->
+              <g class="interactive-node" data-inspect-title="Stage 3: Ambient Injection" data-inspect-desc="Browser cookie jar matches bank.com domain and automatically attaches session_id cookie.">
+                <rect x="740" y="60" width="280" height="180" rx="8" fill="#292010" stroke="#f5b041" stroke-width="1.5" />
+                <rect x="740" y="60" width="280" height="32" rx="8" fill="#3a2f18" />
+                <text x="755" y="82" fill="#f5b041" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">STAGE 03 &bull; CONFUSED DEPUTY</text>
+                <text x="755" y="120" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Ambient Credential Injection</text>
+                <text x="755" y="145" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">Cookie Jar matches bank.com</text>
+                <text x="755" y="165" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">Cookie: session_id=XYZ injected</text>
+                <rect x="755" y="185" width="250" height="24" rx="4" fill="#1a1409" />
+                <text x="765" y="201" fill="#ffe099" font-family="'JetBrains Mono', monospace" font-size="10">Authority attached without consent</text>
+              </g>
+
+              <!-- DOWNWARD CONNECTOR LOOP (Stage 3 -> Stage 4) -->
+              <path d="M 880 240 C 880 300, 880 320, 880 340" stroke="#f5b041" stroke-width="2.5" marker-end="url(#arrow-red)" />
+
+              <!-- ROW 2: (Stage 4 <- Stage 5 <- Stage 6) -->
+              <!-- Stage 4 -->
+              <g class="interactive-node" data-inspect-title="Stage 4: Server Conflation" data-inspect-desc="Server validates session_id belongs to active user, but fails to check request origin context.">
+                <rect x="740" y="340" width="280" height="180" rx="8" fill="#2b1114" stroke="#ff7070" stroke-width="1.5" />
+                <rect x="740" y="340" width="280" height="32" rx="8" fill="#3d181c" />
+                <text x="755" y="362" fill="#ff7070" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">STAGE 04 &bull; SERVER SINK</text>
+                <text x="755" y="400" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Server Conflation Flaw</text>
+                <text x="755" y="425" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">Server maps session_id to victim</text>
+                <text x="755" y="445" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11">Omits Origin / CSRF Token check</text>
+                <rect x="755" y="465" width="250" height="24" rx="4" fill="#1c0a0c" />
+                <text x="765" y="481" fill="#ffb8ad" font-family="'JetBrains Mono', monospace" font-size="10">Conflates identity with intent</text>
+              </g>
+
+              <path d="M 740 430 L 680 430" stroke="#ff5252" stroke-width="2.5" marker-end="url(#arrow-red)" />
+
+              <!-- Stage 5 -->
+              <g class="interactive-node" data-inspect-title="Stage 5: State Mutation" data-inspect-desc="Backend business logic executes database mutation (fund transfer, email update) under victim privileges.">
+                <rect x="390" y="340" width="280" height="180" rx="8" fill="#360f14" stroke="#ff5252" stroke-width="2" />
+                <rect x="390" y="340" width="280" height="32" rx="8" fill="#4d161d" />
+                <text x="405" y="362" fill="#ff8552" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">STAGE 05 &bull; DATABASE COMMIT</text>
+                <text x="405" y="400" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">State Mutation Committed</text>
+                <text x="405" y="425" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">Database updates records</text>
+                <text x="405" y="445" fill="#ffd175" font-family="'JetBrains Mono', monospace" font-size="11">Funds moved: Alice &rarr; Attacker</text>
+                <rect x="405" y="465" width="250" height="24" rx="4" fill="#24070a" />
+                <text x="415" y="481" fill="#ff7373" font-family="'JetBrains Mono', monospace" font-size="10">Irreversible side-effect completed</text>
+              </g>
+
+              <path d="M 390 430 L 330 430" stroke="#52dc88" stroke-width="2.5" marker-end="url(#arrow-green)" />
+
+              <!-- Stage 6 -->
+              <g class="interactive-node" data-inspect-title="Stage 6: Asymmetric SOP Block" data-inspect-desc="Same-Origin Policy blocks evil.com from reading the response body, but the server mutation is already committed!">
+                <rect x="40" y="340" width="280" height="180" rx="8" fill="#0d2417" stroke="#38e1b0" stroke-width="1.5" />
+                <rect x="40" y="340" width="280" height="32" rx="8" fill="#133622" />
+                <text x="55" y="362" fill="#38e1b0" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">STAGE 06 &bull; CLIENT ASYMMETRY</text>
+                <text x="55" y="400" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="16" font-weight="600">Asymmetric SOP Block</text>
+                <text x="55" y="425" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">evil.com cannot read response body</text>
+                <text x="55" y="445" fill="#b7f35d" font-family="'JetBrains Mono', monospace" font-size="11">Blind write-only vulnerability</text>
+                <rect x="55" y="465" width="250" height="24" rx="4" fill="#07170e" />
+                <text x="65" y="481" fill="#75ffaa" font-family="'JetBrains Mono', monospace" font-size="10">Mutation committed regardless of read!</text>
+              </g>
+            </svg>
+          </div>
+
+          <!-- ================= DIAGRAM 4: LOGIC GATES ================= -->
+          <div class="svg-flow-card" id="svg_diag_4">
+            <svg viewBox="0 0 1060 620" class="arch-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+              <!-- INPUT CONDITIONS -->
+              <!-- Condition 1 -->
+              <g class="interactive-node" data-inspect-title="Condition 1: State-Changing Action" data-inspect-desc="Target endpoint performs impactful server-side mutation (email, password, funds, permissions).">
+                <rect x="30" y="50" width="340" height="70" rx="6" fill="#13241b" stroke="#52dc88" stroke-width="1.5" />
+                <text x="45" y="75" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">CONDITION 1 (AND)</text>
+                <text x="45" y="98" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14">State-Changing Action Executed</text>
+              </g>
+              <path d="M 370 85 L 560 85" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+
+              <!-- Condition 2 -->
+              <g class="interactive-node" data-inspect-title="Condition 2: Ambient Credential Dependency" data-inspect-desc="Authentication relies on browser-managed authority (cookies, Basic auth, client certs).">
+                <rect x="30" y="145" width="340" height="70" rx="6" fill="#13241b" stroke="#52dc88" stroke-width="1.5" />
+                <text x="45" y="170" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">CONDITION 2 (AND)</text>
+                <text x="45" y="193" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14">Ambient Credential Dependency (Cookies)</text>
+              </g>
+              <path d="M 370 180 L 560 180" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+
+              <!-- Condition 3 -->
+              <g class="interactive-node" data-inspect-title="Condition 3: Absence of Token" data-inspect-desc="Endpoint lacks unpredictable, cryptographically random anti-CSRF token verification.">
+                <rect x="30" y="240" width="340" height="70" rx="6" fill="#13241b" stroke="#52dc88" stroke-width="1.5" />
+                <text x="45" y="265" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">CONDITION 3 (AND)</text>
+                <text x="45" y="288" fill="#f0f7f1" font-family="'Outfit', sans-serif" font-size="14">Absence / Bypass of Anti-CSRF Tokens</text>
+              </g>
+              <path d="M 370 275 L 560 275" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+
+              <!-- Condition 4: BOOLEAN OR SUB-CIRCUIT -->
+              <rect x="30" y="340" width="340" height="230" rx="8" fill="#111c24" stroke="#4dd8d8" stroke-width="1.5" />
+              <text x="45" y="365" fill="#4dd8d8" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">CONDITION 4: CROSS-ORIGIN PATH (BOOLEAN OR)</text>
+
+              <g class="interactive-node" data-inspect-title="OR-A: Standard Form POST" data-inspect-desc="Form POST permitted if cookie has SameSite=None; Secure.">
+                <rect x="45" y="380" width="310" height="34" rx="4" fill="#182733" />
+                <text x="55" y="402" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">• [OR-A] Standard Form POST (SameSite=None)</text>
+              </g>
+              <g class="interactive-node" data-inspect-title="OR-B: State-Changing GET" data-inspect-desc="GET requests allow cookies on top-level navigation even with SameSite=Lax.">
+                <rect x="45" y="425" width="310" height="34" rx="4" fill="#182733" />
+                <text x="55" y="447" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">• [OR-B] State-Changing GET Navigation (Lax)</text>
+              </g>
+              <g class="interactive-node" data-inspect-title="OR-C: Chromium 2-Minute Window" data-inspect-desc="Chromium permits top-level POST without Lax enforcement for cookies under 120s old.">
+                <rect x="45" y="470" width="310" height="34" rx="4" fill="#182733" />
+                <text x="55" y="492" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">• [OR-C] Chromium 2-Minute Lax POST Window</text>
+              </g>
+              <g class="interactive-node" data-inspect-title="OR-D: Sibling Subdomain" data-inspect-desc="Attacker controls *.domain.com allowing same-site cookie tossing.">
+                <rect x="45" y="515" width="310" height="34" rx="4" fill="#182733" />
+                <text x="55" y="537" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="11">• [OR-D] Sibling Subdomain Cookie Tossing</text>
+              </g>
+
+              <path d="M 370 455 C 460 455, 480 370, 560 370" stroke="#4dd8d8" stroke-width="2" marker-end="url(#arrow-cyan)" />
+
+              <!-- MASTER 4-INPUT AND GATE -->
+              <g class="interactive-node" data-inspect-title="Master Boolean AND Gate" data-inspect-desc="Requires Condition 1, Condition 2, Condition 3, AND at least one OR pathway to be TRUE. If any single gate is broken, CSRF is completely mitigated.">
+                <!-- AND Gate Shape: Flat left, rounded right -->
+                <path d="M 560 40 L 630 40 A 180 180 0 0 1 630 400 L 560 400 Z" fill="#29200f" stroke="#f5b041" stroke-width="2.5" />
+                <text x="585" y="215" fill="#ffd175" font-family="'JetBrains Mono', monospace" font-size="16" font-weight="700">AND</text>
+                <text x="575" y="235" fill="#f5b041" font-family="'JetBrains Mono', monospace" font-size="10">GATE</text>
+              </g>
+
+              <!-- Gate Output Wire -->
+              <path d="M 750 220 L 820 220" stroke="#ff5252" stroke-width="3" marker-end="url(#arrow-red)" />
+
+              <!-- Output Decision: EXPLOITABLE CSRF -->
+              <g class="interactive-node" data-inspect-title="Exploitable CSRF Confirmed" data-inspect-desc="All 4 Boolean gates are satisfied. The target endpoint is demonstrably vulnerable to cross-site request forgery.">
+                <rect x="820" y="140" width="220" height="160" rx="10" fill="#3b1115" stroke="#ff5252" stroke-width="2" />
+                <text x="835" y="175" fill="#ff8552" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">VULNERABILITY STATUS</text>
+                <text x="835" y="205" fill="#ff5252" font-family="'Outfit', sans-serif" font-size="18" font-weight="700">EXPLOITABLE CSRF</text>
+                <text x="835" y="230" fill="#ffd8a8" font-family="'JetBrains Mono', monospace" font-size="11">State mutation can be forced</text>
+                <text x="835" y="250" fill="#ffd8a8" font-family="'JetBrains Mono', monospace" font-size="11">without victim knowledge.</text>
+                <rect x="835" y="265" width="190" height="22" rx="4" fill="#24070a" />
+                <text x="845" y="280" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="10">All 4 gates evaluate TRUE</text>
+              </g>
+
+              <!-- MITIGATION NOTE -->
+              <rect x="560" y="470" width="480" height="100" rx="8" fill="#0d2417" stroke="#52dc88" stroke-width="1.5" />
+              <text x="580" y="500" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">🛡️ BREAKING ANY SINGLE GATE BREAKS THE ATTACK</text>
+              <text x="580" y="525" fill="#c4d2c5" font-family="'Outfit', sans-serif" font-size="12">• If action is read-only &rarr; SOP blocks data leakage.</text>
+              <text x="580" y="545" fill="#c4d2c5" font-family="'Outfit', sans-serif" font-size="12">• If auth uses Authorization header &rarr; browser cannot auto-attach.</text>
+            </svg>
+          </div>
+
+          <!-- ================= DIAGRAM 5: SAMESITE DECISION TREE ================= -->
+          <div class="svg-flow-card" id="svg_diag_5">
+            <svg viewBox="0 0 1060 660" class="arch-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+              <!-- ROOT TRIGGER -->
+              <rect x="380" y="20" width="300" height="46" rx="8" fill="#162338" stroke="#63a4fc" stroke-width="1.5" />
+              <text x="400" y="48" fill="#7eb2ff" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">Outbound HTTP Request Dispatched</text>
+
+              <path d="M 530 66 L 530 110" stroke="#63a4fc" stroke-width="2" marker-end="url(#arrow-cyan)" />
+
+              <!-- DIAMOND 1: SAME-SITE MATCH? -->
+              <g class="interactive-node" data-inspect-title="Decision: Same-Site Match?" data-inspect-desc="Compares request scheme and registrable domain (eTLD+1). If matching, request is intra-site.">
+                <polygon points="530,110 650,165 530,220 410,165" fill="#2b2311" stroke="#f5b041" stroke-width="2" />
+                <text x="475" y="160" fill="#ffd175" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">Same-Site Match?</text>
+                <text x="465" y="178" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">(Scheme + eTLD+1)</text>
+              </g>
+
+              <!-- YES BRANCH -> ATTACH ALL -->
+              <path d="M 410 165 L 260 165" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+              <text x="315" y="155" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">YES</text>
+
+              <g class="interactive-node" data-inspect-title="Terminal: Attach All Cookies" data-inspect-desc="SameSite restrictions only apply across site boundaries. Intra-site requests always attach Strict, Lax, and None cookies.">
+                <rect x="30" y="130" width="220" height="70" rx="8" fill="#0e291a" stroke="#52dc88" stroke-width="1.5" />
+                <text x="45" y="155" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700">[ATTACH ALL COOKIES]</text>
+                <text x="45" y="175" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Strict, Lax, &amp; None Attached</text>
+                <text x="45" y="190" fill="#b7f35d" font-family="'JetBrains Mono', monospace" font-size="10">Intra-site legitimate request</text>
+              </g>
+
+              <!-- NO BRANCH (Cross-Site) -> DIAMOND 2: SAMESITE ATTRIBUTE -->
+              <path d="M 650 165 L 780 165 L 780 230" stroke="#ff5252" stroke-width="2" marker-end="url(#arrow-red)" />
+              <text x="690" y="155" fill="#ff5252" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">NO (Cross-Site)</text>
+
+              <!-- DIAMOND 2: SAMESITE ATTRIBUTE -->
+              <g class="interactive-node" data-inspect-title="Decision: SameSite Policy" data-inspect-desc="Inspects whether cookie specifies Strict, Lax, or None in Set-Cookie header.">
+                <polygon points="780,230 900,285 780,340 660,285" fill="#2b2311" stroke="#f5b041" stroke-width="2" />
+                <text x="715" y="280" fill="#ffd175" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">Inspect SameSite</text>
+                <text x="735" y="298" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Attribute</text>
+              </g>
+
+              <!-- Branch 1: SameSite=Strict -->
+              <path d="M 660 285 L 530 285" stroke="#52dc88" stroke-width="2" marker-end="url(#arrow-green)" />
+              <text x="560" y="275" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700">Strict</text>
+
+              <g class="interactive-node" data-inspect-title="Terminal: Strict Withholds Cookie" data-inspect-desc="SameSite=Strict cookies are NEVER sent on cross-site requests, completely preventing CSRF.">
+                <rect x="330" y="255" width="190" height="60" rx="6" fill="#0d2417" stroke="#52dc88" stroke-width="1.5" />
+                <text x="345" y="278" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">🛑 [WITHHOLD COOKIE]</text>
+                <text x="345" y="298" fill="#b7f35d" font-family="'JetBrains Mono', monospace" font-size="10">Never sent. Blocks ALL CSRF.</text>
+              </g>
+
+              <!-- Branch 2: SameSite=None -->
+              <path d="M 780 340 L 780 400" stroke="#f5b041" stroke-width="2" marker-end="url(#arrow-cyan)" />
+              <text x="785" y="375" fill="#f5b041" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700">None</text>
+
+              <g class="interactive-node" data-inspect-title="Terminal: None Attaches Cookie" data-inspect-desc="SameSite=None cookies are sent on all cross-site requests (if Secure flag is present). Vulnerable to standard CSRF.">
+                <rect x="690" y="400" width="180" height="65" rx="6" fill="#3b1115" stroke="#ff5252" stroke-width="1.5" />
+                <text x="705" y="425" fill="#ff5252" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">🔴 [ATTACH COOKIE]</text>
+                <text x="705" y="445" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="10">Vulnerable to standard CSRF</text>
+              </g>
+
+              <!-- Branch 3: SameSite=Lax (Default) -->
+              <path d="M 900 285 L 970 285 L 970 380" stroke="#4dd8d8" stroke-width="2" marker-end="url(#arrow-cyan)" />
+              <text x="915" y="275" fill="#4dd8d8" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700">Lax (Default)</text>
+
+              <!-- Lax Branch Decision: Navigation vs Subresource -->
+              <rect x="870" y="380" width="180" height="90" rx="6" fill="#111c24" stroke="#4dd8d8" stroke-width="1" />
+              <text x="885" y="405" fill="#4dd8d8" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">Top-Level Navigation?</text>
+              <text x="885" y="425" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Subresource &rarr; 🛑 Withhold</text>
+              <text x="885" y="445" fill="#ffd175" font-family="'JetBrains Mono', monospace" font-size="10">GET Link &rarr; ⚠️ Attach Cookie</text>
+              <text x="885" y="460" fill="#ff8552" font-family="'JetBrains Mono', monospace" font-size="10">POST &lt; 2m &rarr; 🔴 Attach Cookie</text>
+            </svg>
+          </div>
+
+          <!-- ================= DIAGRAM 6: BREAKING THE CHAIN ================= -->
+          <div class="svg-flow-card" id="svg_diag_6">
+            <svg viewBox="0 0 1060 620" class="arch-svg-canvas" xmlns="http://www.w3.org/2000/svg">
+              <!-- LEFT COLUMN: ATTACK SEQUENCE -->
+              <rect x="30" y="20" width="380" height="570" rx="10" fill="#1a0a0d" stroke="#ff5252" stroke-width="1.5" />
+              <rect x="30" y="20" width="380" height="38" rx="10" fill="#301015" />
+              <text x="50" y="44" fill="#ff7070" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">⚡ ATTACK CAUSAL SEQUENCE</text>
+
+              <!-- Attack Step 1 -->
+              <rect x="50" y="75" width="340" height="55" rx="6" fill="#260e12" />
+              <text x="65" y="98" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">1. Attacker crafts payload on evil.com</text>
+              <text x="65" y="118" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Pre-populates state-changing parameters</text>
+
+              <!-- Attack Step 2 -->
+              <rect x="50" y="145" width="340" height="65" rx="6" fill="#260e12" />
+              <text x="65" y="168" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">2. Browser processes dispatch</text>
+              <text x="65" y="188" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Inspects cookie jar for target domain</text>
+
+              <!-- Attack Step 3 -->
+              <rect x="50" y="225" width="340" height="65" rx="6" fill="#260e12" />
+              <text x="65" y="248" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">3. Request emitted over wire</text>
+              <text x="65" y="268" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Emits headers: Origin: evil.com, Cookie</text>
+
+              <!-- Attack Step 4 -->
+              <rect x="50" y="305" width="340" height="65" rx="6" fill="#260e12" />
+              <text x="65" y="328" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">4. Arrives at target server sink</text>
+              <text x="65" y="348" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Application router receives incoming HTTP packet</text>
+
+              <!-- Attack Step 5 -->
+              <rect x="50" y="385" width="340" height="65" rx="6" fill="#260e12" />
+              <text x="65" y="408" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">5. Endpoint evaluates parameters</text>
+              <text x="65" y="428" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Validates session ID; checks for CSRF nonces</text>
+
+              <!-- Attack Step 6 -->
+              <rect x="50" y="465" width="340" height="65" rx="6" fill="#260e12" />
+              <text x="65" y="488" fill="#ff9999" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">6. State mutation committed</text>
+              <text x="65" y="508" fill="#c4d2c5" font-family="'JetBrains Mono', monospace" font-size="10">Backend database updates victim records</text>
+
+              <!-- RIGHT COLUMN: 5 DEFENSIVE INTERCEPTORS -->
+              <rect x="520" y="20" width="510" height="570" rx="10" fill="#09180f" stroke="#52dc88" stroke-width="1.5" />
+              <rect x="520" y="20" width="510" height="38" rx="10" fill="#12331f" />
+              <text x="540" y="44" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">🛡️ DEFENSIVE ARCHITECTURE INTERCEPTORS</text>
+
+              <!-- Interceptor 1 -->
+              <g class="interactive-node" data-inspect-title="Defense 1: SameSite Policy" data-inspect-desc="Configuring SameSite=Strict or Lax instructs the browser to withhold cookies on cross-origin requests.">
+                <rect x="540" y="145" width="470" height="65" rx="6" fill="#102b1b" stroke="#2b6b43" stroke-width="1" />
+                <text x="555" y="168" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">DEFENSE 1: SameSite Cookie Policy (Strict / Lax)</text>
+                <text x="555" y="188" fill="#b7f35d" font-family="'Outfit', sans-serif" font-size="12">Browser withholds cookie on cross-site POST. Server sees 401 unauth.</text>
+              </g>
+              <path d="M 390 177 L 540 177" stroke="#52dc88" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arrow-green)" />
+
+              <!-- Interceptor 2 -->
+              <g class="interactive-node" data-inspect-title="Defense 2: Fetch Metadata" data-inspect-desc="Server inspects Sec-Fetch-Site: cross-site and rejects the request at the reverse proxy or middleware layer.">
+                <rect x="540" y="225" width="470" height="65" rx="6" fill="#102b1b" stroke="#2b6b43" stroke-width="1" />
+                <text x="555" y="248" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">DEFENSE 2: Fetch Metadata (Sec-Fetch-Site: cross-site)</text>
+                <text x="555" y="268" fill="#b7f35d" font-family="'Outfit', sans-serif" font-size="12">Server gateway rejects any cross-site initiated mutation before handler.</text>
+              </g>
+              <path d="M 390 257 L 540 257" stroke="#52dc88" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arrow-green)" />
+
+              <!-- Interceptor 3 -->
+              <g class="interactive-node" data-inspect-title="Defense 3: Custom Request Header" data-inspect-desc="Requiring a header like X-Requested-With prevents HTML forms from succeeding and triggers CORS preflights.">
+                <rect x="540" y="305" width="470" height="65" rx="6" fill="#102b1b" stroke="#2b6b43" stroke-width="1" />
+                <text x="555" y="328" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">DEFENSE 3: Custom Header (X-CSRF-Token / X-Requested-With)</text>
+                <text x="555" y="348" fill="#b7f35d" font-family="'Outfit', sans-serif" font-size="12">HTML forms cannot set custom headers; fetch() triggers CORS preflight.</text>
+              </g>
+              <path d="M 390 337 L 540 337" stroke="#52dc88" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arrow-green)" />
+
+              <!-- Interceptor 4 -->
+              <g class="interactive-node" data-inspect-title="Defense 4: Synchronizer Token Pattern" data-inspect-desc="Validates a cryptographically random, unpredictable token tied to the user's session.">
+                <rect x="540" y="385" width="470" height="65" rx="6" fill="#102b1b" stroke="#2b6b43" stroke-width="1" />
+                <text x="555" y="408" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">DEFENSE 4: Anti-CSRF Synchronizer Token Nonce</text>
+                <text x="555" y="428" fill="#b7f35d" font-family="'Outfit', sans-serif" font-size="12">SOP prevents evil.com from reading token from DOM; missing token &rarr; 403.</text>
+              </g>
+              <path d="M 390 417 L 540 417" stroke="#52dc88" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arrow-green)" />
+
+              <!-- Interceptor 5 -->
+              <g class="interactive-node" data-inspect-title="Defense 5: Step-Up Re-Authentication" data-inspect-desc="Prompting for current password, OTP, or biometric WebAuthn prevents automated background execution.">
+                <rect x="540" y="465" width="470" height="65" rx="6" fill="#102b1b" stroke="#2b6b43" stroke-width="1" />
+                <text x="555" y="488" fill="#52dc88" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700">DEFENSE 5: Step-Up Re-Authentication (Password / MFA)</text>
+                <text x="555" y="508" fill="#b7f35d" font-family="'Outfit', sans-serif" font-size="12">Mutation halted until user proves active presence via interactive challenge.</text>
+              </g>
+              <path d="M 390 497 L 540 497" stroke="#52dc88" stroke-width="2" stroke-dasharray="4 2" marker-end="url(#arrow-green)" />
+            </svg>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 2. MERMAID GRAPH VIEWPORT -->
+      <div id="mermaidViewport" class="diagram-viewport-panel" style="display: none;">
+        <div class="mermaid-container" id="mermaidRenderHost">
+          <div class="mermaid-loading">Rendering Mermaid diagram...</div>
+        </div>
+        <!-- Expandable Source Drawer -->
+        <details class="mermaid-source-drawer">
+          <summary>View Raw Mermaid Diagram Code</summary>
+          <pre class="mermaid-source-pre" id="mermaidSourceCode"></pre>
+        </details>
+      </div>
+
+      <!-- 3. CANONICAL RAW ASCII VIEWPORT -->
+      <div id="asciiViewport" class="diagram-viewport-panel" style="display: none;">
+        <div class="ascii-terminal-wrapper">
+          <div class="terminal-header">
+            <span class="term-dot red"></span>
+            <span class="term-dot yellow"></span>
+            <span class="term-dot green"></span>
+            <span class="term-title" id="asciiTerminalFilename">01-trust-boundary.txt</span>
+          </div>
+          <pre class="ascii-pre" id="asciiRawContent">{diagrams[0]?.content}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM INTERACTIVE PROTOCOL HUD -->
+    <footer class="diag-inspect-hud">
+      <div class="hud-status-indicator">
+        <span class="hud-pulse-dot"></span>
+        <span class="hud-label">PROTOCOL INSPECTOR:</span>
+      </div>
+      <div class="hud-content">
+        <strong id="hudElementTitle">Click any node or packet in the diagram to inspect protocol dynamics</strong>
+        <span id="hudElementDesc">Formal verification trace of cross-origin state-mutation semantics per RFC 6265bis &amp; RFC 7231</span>
+      </div>
+    </footer>
+  </main>
+</div>
+
+<style>
+  .visual-diagrams-layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    background: #080c0a;
+    color: var(--text-main);
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .diag-nav-sidebar {
+    width: 330px;
+    background: #0e1411;
+    border-right: 1px solid #1c2b20;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .diag-nav-header {
+    padding: 20px 18px 14px;
+    border-bottom: 1px solid #1c2b20;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .blueprint-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #52dc88;
+    letter-spacing: 0.1em;
+  }
+
+  .diag-nav-header h3 {
+    margin: 2px 0 0 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #f0f7f1;
+  }
+
+  .diag-nav-header p {
+    margin: 0;
+    font-size: 12px;
+    color: #798d7c;
+  }
+
+  .diag-btn-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .diag-select-btn {
+    text-align: left;
+    background: #131c16;
+    border: 1px solid #1f2f24;
+    border-radius: 8px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .diag-select-btn:hover {
+    background: #18241c;
+    border-color: #2f4937;
+  }
+
+  .diag-select-btn.active {
+    background: #182b20;
+    border-color: #52dc88;
+    box-shadow: 0 0 0 1px #52dc88;
+  }
+
+  .btn-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .btn-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #52dc88;
+  }
+
+  .btn-type-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    background: #1e3325;
+    color: #8be8aa;
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .btn-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f0f7f1;
+    line-height: 1.3;
+  }
+
+  .btn-sub {
+    font-size: 11px;
+    color: #798d7c;
+    line-height: 1.35;
+  }
+
+  .sidebar-provenance {
+    padding: 12px 16px;
+    border-top: 1px solid #1c2b20;
+    font-size: 11px;
+    color: #5d6f60;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sidebar-provenance code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #4dd8d8;
+  }
+
+  /* MAIN DISPLAY */
+  .diag-main-display {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  /* TOOLBAR */
+  .diag-toolbar {
+    padding: 16px 24px;
+    border-bottom: 1px solid #1c2b20;
+    background: #0b110e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+
+  .diag-meta-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .diag-meta-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #52dc88;
+    letter-spacing: 0.08em;
+  }
+
+  .diag-meta-titles h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #f0f7f1;
+    font-weight: 700;
+  }
+
+  .diag-meta-titles p {
+    margin: 0;
+    font-size: 13px;
+    color: #798d7c;
+  }
+
+  .diag-controls-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  /* VIEW MODE TOGGLE */
+  .view-mode-toggle {
+    display: flex;
+    background: #131c16;
+    border: 1px solid #1f2f24;
+    border-radius: 6px;
+    padding: 2px;
+  }
+
+  .toggle-btn {
+    background: transparent;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #798d7c;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s;
+  }
+
+  .toggle-btn:hover {
+    color: #f0f7f1;
+  }
+
+  .toggle-btn.active {
+    background: #1d3325;
+    color: #52dc88;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  /* ZOOM CONTROLS */
+  .canvas-zoom-tools {
+    display: flex;
+    align-items: center;
+    background: #131c16;
+    border: 1px solid #1f2f24;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .tool-btn {
+    background: transparent;
+    border: none;
+    color: #c4d2c5;
+    font-size: 14px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .tool-btn:hover {
+    background: #1e2c22;
+    color: #52dc88;
+  }
+
+  .zoom-indicator {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #798d7c;
+    padding: 0 4px;
+  }
+
+  .action-btn {
+    background: #16241a;
+    border: 1px solid #233b2a;
+    color: #c4d2c5;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover {
+    background: #1d3325;
+    border-color: #52dc88;
+    color: #f0f7f1;
+  }
+
+  /* INVARIANT BANNER */
+  .diag-takeaway-banner {
+    background: #0e1812;
+    border-bottom: 1px solid #1c2b20;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: #c4d2c5;
+    flex-shrink: 0;
+  }
+
+  .banner-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #080c0a;
+    background: #52dc88;
+    padding: 2px 8px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+
+  /* WORKSPACE CANVAS CONTAINER */
+  .diag-workspace-container {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background: #060907;
+    background-image: 
+      radial-gradient(rgba(82, 220, 136, 0.03) 1px, transparent 1px),
+      radial-gradient(rgba(77, 216, 216, 0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: 0 0, 12px 12px;
+  }
+
+  .diagram-viewport-panel {
+    min-width: 100%;
+    min-height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 30px;
+  }
+
+  /* SVG CANVAS */
+  .svg-zoom-wrapper {
+    transform-origin: top center;
+    transition: transform 0.12s ease-out;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .svg-flow-card {
+    display: none;
+    width: 100%;
+  }
+
+  .svg-flow-card.active {
+    display: block;
+  }
+
+  .arch-svg-canvas {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 12px 28px rgba(0,0,0,0.6));
+  }
+
+  .interactive-node {
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .interactive-node:hover {
+    filter: brightness(1.18);
+  }
+
+  /* MERMAID VIEWPORT */
+  .mermaid-container {
+    background: #0b120e;
+    border: 1px solid #1c2b20;
+    border-radius: 10px;
+    padding: 30px;
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    justify-content: center;
+    overflow: auto;
+  }
+
+  .mermaid-loading {
+    color: #798d7c;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 40px;
+  }
+
+  .mermaid-source-drawer {
+    width: 100%;
+    max-width: 1100px;
+    margin-top: 16px;
+    background: #0f1612;
+    border: 1px solid #1c2b20;
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+
+  .mermaid-source-drawer summary {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #52dc88;
+    cursor: pointer;
+  }
+
+  .mermaid-source-pre {
+    margin: 12px 0 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #8be8aa;
+    line-height: 1.45;
+    overflow-x: auto;
+    white-space: pre-wrap;
+  }
+
+  /* RAW ASCII VIEWPORT */
+  .ascii-terminal-wrapper {
+    width: 100%;
+    max-width: 1100px;
+    background: #070c09;
+    border: 1px solid #1f3325;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.7);
+  }
+
+  .terminal-header {
+    background: #0f1813;
+    padding: 8px 14px;
+    border-bottom: 1px solid #1f3325;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .term-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .term-dot.red { background: #ff5f56; }
+  .term-dot.yellow { background: #ffbd2e; }
+  .term-dot.green { background: #27c93f; }
+
+  .term-title {
+    margin-left: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #798d7c;
+  }
+
+  .ascii-pre {
+    margin: 0;
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: #a8dfb4;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* BOTTOM HUD */
+  .diag-inspect-hud {
+    background: #0a110d;
+    border-top: 1px solid #1c2b20;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .hud-status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .hud-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #52dc88;
+    box-shadow: 0 0 8px #52dc88;
+  }
+
+  .hud-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    color: #52dc88;
+    letter-spacing: 0.08em;
+  }
+
+  .hud-content {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .hud-content strong {
+    color: #f0f7f1;
+    font-weight: 600;
+  }
+
+  .hud-content span {
+    color: #798d7c;
+  }
+</style>
+
+<script define:vars={{ diagrams, visualConfigs: VISUAL_DIAGRAMS_CONFIG, mermaidDiagrams: MERMAID_DIAGRAMS }}>
+  // Data Indexing
+  const diagMap = new Map();
+  diagrams.forEach(d => diagMap.set(d.id, d));
+
+  const configMap = new Map();
+  visualConfigs.forEach(vc => configMap.set(vc.id, vc));
+
+  let currentDiagId = 'diag_1';
+  let currentViewMode = 'svg'; // 'svg' | 'mermaid' | 'ascii'
+  let currentZoom = 1.0;
+  let mermaidLoaded = false;
+
+  // DOM Handles
+  const activeDiagramTag = document.getElementById('activeDiagramTag');
+  const activeDiagramTitle = document.getElementById('activeDiagramTitle');
+  const activeDiagramSub = document.getElementById('activeDiagramSub');
+  const activeTakeawayText = document.getElementById('activeTakeawayText');
+
+  const svgViewport = document.getElementById('svgViewport');
+  const mermaidViewport = document.getElementById('mermaidViewport');
+  const asciiViewport = document.getElementById('asciiViewport');
+  const svgZoomTarget = document.getElementById('svgZoomTarget');
+
+  const btnModeSvg = document.getElementById('btnModeSvg');
+  const btnModeMermaid = document.getElementById('btnModeMermaid');
+  const btnModeAscii = document.getElementById('btnModeAscii');
+
+  const btnZoomIn = document.getElementById('btnZoomIn');
+  const btnZoomOut = document.getElementById('btnZoomOut');
+  const btnZoomReset = document.getElementById('btnZoomReset');
+  const zoomLevelText = document.getElementById('zoomLevelText');
+
+  const btnCopyDiagramSpec = document.getElementById('btnCopyDiagramSpec');
+  const asciiRawContent = document.getElementById('asciiRawContent');
+  const asciiTerminalFilename = document.getElementById('asciiTerminalFilename');
+  const mermaidRenderHost = document.getElementById('mermaidRenderHost');
+  const mermaidSourceCode = document.getElementById('mermaidSourceCode');
+
+  const hudElementTitle = document.getElementById('hudElementTitle');
+  const hudElementDesc = document.getElementById('hudElementDesc');
+
+  // Mermaid Renderer using dynamic import or global
+  async function renderMermaid() {
+    if (!mermaidRenderHost) return;
+    const mermaidCode = mermaidDiagrams[currentDiagId] || 'graph TD; Error[Diagram not found];';
+    if (mermaidSourceCode) mermaidSourceCode.textContent = mermaidCode;
+
+    try {
+      // Dynamic import
+      const mermaidModule = await import('mermaid');
+      const mermaid = mermaidModule.default;
+      if (!mermaidLoaded) {
+        mermaid.initialize({
+          startOnLoad: false,
+          theme: 'dark',
+          themeVariables: {
+            darkMode: true,
+            background: '#0a0e0c',
+            primaryColor: '#18231c',
+            primaryBorderColor: '#52dc88',
+            primaryTextColor: '#f0f7f1',
+            lineColor: '#4dd8d8',
+            secondaryColor: '#151e18',
+            tertiaryColor: '#111713',
+            fontFamily: 'JetBrains Mono, monospace'
+          }
+        });
+        mermaidLoaded = true;
+      }
+      const uniqueId = `mermaid_${currentDiagId}_${Date.now()}`;
+      const { svg } = await mermaid.render(uniqueId, mermaidCode);
+      mermaidRenderHost.innerHTML = svg;
+    } catch (err) {
+      console.error('Mermaid render error:', err);
+      mermaidRenderHost.innerHTML = `<div style="color: #ff7070; padding: 20px;">Mermaid Render Notice: ${err.message}</div>`;
+    }
+  }
+
+  function setZoom(newZoom) {
+    currentZoom = Math.min(Math.max(newZoom, 0.5), 2.2);
+    if (svgZoomTarget) {
+      svgZoomTarget.style.transform = `scale(${currentZoom})`;
+    }
+    if (zoomLevelText) {
+      zoomLevelText.textContent = `${Math.round(currentZoom * 100)}%`;
+    }
+  }
+
+  btnZoomIn.addEventListener('click', () => setZoom(currentZoom + 0.15));
+  btnZoomOut.addEventListener('click', () => setZoom(currentZoom - 0.15));
+  btnZoomReset.addEventListener('click', () => setZoom(1.0));
+
+  function setViewMode(mode) {
+    currentViewMode = mode;
+    [btnModeSvg, btnModeMermaid, btnModeAscii].forEach(b => b.classList.remove('active'));
+    [svgViewport, mermaidViewport, asciiViewport].forEach(vp => vp.style.display = 'none');
+
+    if (mode === 'svg') {
+      btnModeSvg.classList.add('active');
+      svgViewport.style.display = 'flex';
+    } else if (mode === 'mermaid') {
+      btnModeMermaid.classList.add('active');
+      mermaidViewport.style.display = 'flex';
+      renderMermaid();
+    } else if (mode === 'ascii') {
+      btnModeAscii.classList.add('active');
+      asciiViewport.style.display = 'flex';
+    }
+  }
+
+  btnModeSvg.addEventListener('click', () => setViewMode('svg'));
+  btnModeMermaid.addEventListener('click', () => setViewMode('mermaid'));
+  btnModeAscii.addEventListener('click', () => setViewMode('ascii'));
+
+  function selectDiagram(id) {
+    currentDiagId = id;
+    const config = configMap.get(id);
+    const diag = diagMap.get(id);
+
+    // Update sidebar active buttons
+    document.querySelectorAll('.diag-select-btn').forEach(btn => {
+      if (btn.getAttribute('data-diagram-id') === id) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    if (config) {
+      activeDiagramTag.textContent = `DIAGRAM 0${config.number} • ${config.title.toUpperCase()}`;
+      activeDiagramTitle.textContent = `${config.number}. ${config.title}`;
+      activeDiagramSub.textContent = config.subtitle;
+      activeTakeawayText.textContent = config.keyTakeaway;
+    }
+
+    if (diag) {
+      asciiRawContent.textContent = diag.content;
+      asciiTerminalFilename.textContent = diag.filename;
+    }
+
+    // Toggle SVG visual flow card
+    document.querySelectorAll('.svg-flow-card').forEach(card => {
+      if (card.id === `svg_${id}`) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    });
+
+    // If currently on mermaid mode, re-render
+    if (currentViewMode === 'mermaid') {
+      renderMermaid();
+    }
+  }
+
+  // Sidebar clicks
+  document.querySelectorAll('.diag-select-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-diagram-id');
+      if (id) selectDiagram(id);
+    });
+  });
+
+  // Interactive Node Click -> HUD Update
+  document.querySelectorAll('.interactive-node').forEach(node => {
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const title = node.getAttribute('data-inspect-title') || 'Architectural Component';
+      const desc = node.getAttribute('data-inspect-desc') || 'Component verified against canonical security model.';
+      hudElementTitle.textContent = title;
+      hudElementDesc.textContent = desc;
+    });
+  });
+
+  // Copy Spec button
+  btnCopyDiagramSpec.addEventListener('click', () => {
+    const textToCopy = currentViewMode === 'mermaid' 
+      ? (mermaidDiagrams[currentDiagId] || '') 
+      : asciiRawContent.textContent;
+    navigator.clipboard.writeText(textToCopy);
+    const origHtml = btnCopyDiagramSpec.innerHTML;
+    btnCopyDiagramSpec.innerHTML = `<span>✔</span> Copied!`;
+    setTimeout(() => { btnCopyDiagramSpec.innerHTML = origHtml; }, 1600);
+  });
+</script>

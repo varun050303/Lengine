@@ -63,10 +63,10 @@
     },
     {
       "id": "S3",
-      "title": "RFC 6265bis - Section 5.3.7 SameSite Attribute",
-      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-07#section-5.3.7",
+      "title": "IETF Internet-Draft draft-ietf-httpbis-rfc6265bis (Cookies: HTTP State Management Mechanism)",
+      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis",
       "tier": 1,
-      "claim": "Defines browser-enforced isolation boundaries for ambient cookie transmission to prevent cross-site request forgery.",
+      "claim": "Defines browser-enforced isolation boundaries for ambient cookie transmission (SameSite attribute) to prevent cross-site request forgery. As of retrieval this remains an active IETF Internet-Draft, not yet a numbered RFC.",
       "retrieved_this_pass": true
     }
   ]

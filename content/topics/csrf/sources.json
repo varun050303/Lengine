@@ -28,10 +28,10 @@
     },
     {
       "id": "S4",
-      "title": "RFC 6265bis - Cookies: HTTP State Management Mechanism",
-      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-07#section-5.3.7",
+      "title": "IETF Internet-Draft draft-ietf-httpbis-rfc6265bis (Cookies: HTTP State Management Mechanism)",
+      "url": "https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis",
       "tier": 1,
-      "claim": "Specifies the SameSite cookie attribute (Strict, Lax, None) and defines when cookies are attached or withheld during cross-site requests.",
+      "claim": "Specifies the SameSite cookie attribute (Strict, Lax, None) and defines when cookies are attached or withheld during cross-site requests. As of retrieval this remains an active IETF Internet-Draft (not yet a numbered RFC obsoleting RFC 6265); section numbering may shift between draft revisions, so this citation intentionally does not pin to a specific section.",
       "retrieved_this_pass": true
     },
     {
