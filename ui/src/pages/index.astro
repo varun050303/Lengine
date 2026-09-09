@@ -1,1 +1,40 @@
-PLACEHOLDER
+---
+import '../styles/global.css';
+import { getCsrfFullKnowledge } from '../utils/csrf-knowledge';
+import VisualDiagramsViewer from '../components/VisualDiagramsViewer.astro';
+
+const knowledge = getCsrfFullKnowledge();
+const { topicJson, mindmap, diagrams, crosslinks, mechanismFamily, concepts, claims, sources } = knowledge;
+---
+
+<!--
+  TEMPORARY STUB — full index.astro (~60KB) hit GitHub tool payload limits.
+  Restore the complete file from local clone or from commit before placeholder:
+
+    git checkout 5bcfa9d40277677c6d95c59263d2fe6deea6b8fc -- ui/src/pages/index.astro
+
+  Then apply defense_analysis binding (topicJson.defenses → topicJson.defense_analysis).
+  Local good copy with patch: artifacts/index_astro_restore.astro in the agent workspace.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Lengine UI — restore index.astro</title>
+    <style>
+      body { font-family: system-ui, sans-serif; background: #0a0e0c; color: #c4d2c5; padding: 2rem; }
+      code { background: #18231c; padding: 0.2em 0.4em; border-radius: 4px; }
+      pre { background: #111713; padding: 1rem; border-radius: 8px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>index.astro needs restore</h1>
+    <p>The full page exceeded the GitHub connector payload limit during an automated fix.</p>
+    <p>Restore with:</p>
+    <pre>git checkout 5bcfa9d40277677c6d95c59263d2fe6deea6b8fc -- ui/src/pages/index.astro
+git add ui/src/pages/index.astro
+# then patch defenses: topicJson.defenses → topicJson.defense_analysis
+git commit -m "restore index.astro + defense_analysis binding"
+git push</pre>
+    <p>Successful small fixes already on main: <code>ui/README.md</code>, <code>ui/src/utils/csrf-knowledge.ts</code>.</p>
+  </body>
+</html>
